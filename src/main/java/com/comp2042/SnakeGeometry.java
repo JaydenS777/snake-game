@@ -32,28 +32,22 @@ final class SnakeGeometry {
         throw new IllegalArgumentException("Snake segments must occupy neighboring board cells.");
     }
 
-    /** Returns the rotation for the existing corner sprite, or -1 for a straight segment. */
+    /** Returns the rotation for the base corner sprite (top-to-left), or -1 for a straight segment. */
     static int turnRotation(int incomingDirection, int outgoingDirection) {
-        if (incomingDirection == outgoingDirection) {
-            return -1;
-        }
-
-        if (incomingDirection == LEFT && outgoingDirection == UP
-                || incomingDirection == DOWN && outgoingDirection == RIGHT) {
-            return 180;
-        }
-        if (incomingDirection == LEFT && outgoingDirection == DOWN
-                || incomingDirection == UP && outgoingDirection == RIGHT) {
-            return 270;
-        }
-        if (incomingDirection == RIGHT && outgoingDirection == UP
-                || incomingDirection == DOWN && outgoingDirection == LEFT) {
-            return 90;
-        }
-        if (incomingDirection == RIGHT && outgoingDirection == DOWN
-                || incomingDirection == UP && outgoingDirection == LEFT) {
-            return 0;
-        }
+        if (incomingDirection == DOWN && outgoingDirection == LEFT
+                || incomingDirection == RIGHT && outgoingDirection == UP) return 0;
+        if (incomingDirection == DOWN && outgoingDirection == RIGHT
+                || incomingDirection == LEFT && outgoingDirection == UP) return 90;
+        if (incomingDirection == UP && outgoingDirection == RIGHT
+                || incomingDirection == LEFT && outgoingDirection == DOWN) return 180;
+        if (incomingDirection == UP && outgoingDirection == LEFT
+                || incomingDirection == RIGHT && outgoingDirection == DOWN) return 270;
         return -1;
+    }
+
+    /** Rotation offset for a tail sprite whose unrotated tip points down. */
+    static int tailRotation(int directionFromTailToHead) {
+        int tailDirection = (directionFromTailToHead + 180) % 360;
+        return (tailDirection - DOWN + 360) % 360;
     }
 }

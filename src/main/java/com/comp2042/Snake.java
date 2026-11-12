@@ -189,9 +189,13 @@ public class Snake {
             return;
         }
 
-        imageHead = new ImageView(new Image("resources/views/res/snakehead.png"));
-        imageBody = new ImageView(new Image("resources/views/res/snakebody.png"));
-        imageTurn = new ImageView(new Image("resources/views/res/snaketurnleft.png"));
-        imageTail = new ImageView(new Image("resources/views/res/snaketail.png"));
+        imageHead = new ImageView(new Image("resources/views/res/snakehead-v2.png"));
+        imageBody = new ImageView(new Image("resources/views/res/snakebody-v2.png"));
+        imageTurn = new ImageView(new Image("resources/views/res/snaketurn-v2.png"));
+        imageTail = new ImageView(new Image("resources/views/res/snaketail-v2.png"));
+        imageHead.setSmooth(false);
+        imageBody.setSmooth(false);
+        imageTurn.setSmooth(false);
+        imageTail.setSmooth(false);
     }
 }

@@ -30,7 +30,7 @@
     -fx-text-fill: #ffffff;
     -fx-background-image: url("res/btn.png");
     -fx-background-repeat: no-repeat;
-    -fx-background-size: 115 40;
+    -fx-background-size: 150 40;
 }
 
 .startAndQuitBtn:pressed {
@@ -39,7 +39,7 @@
     -fx-text-fill: #000000;
     -fx-background-image: url("res/btn_StartAndQuit_pressed.png");
     -fx-background-repeat: no-repeat;
-    -fx-background-size: 115 40;
+    -fx-background-size: 150 40;
 }
 
 .label {
@@ -50,6 +50,36 @@
 #title {
     -fx-font-family: "SF Pixelate Shaded", bold;
     -fx-font-size: 40;
+}
+
+#optionsTitle {
+    -fx-font-family: "SF Pixelate Shaded", bold;
+    -fx-font-size: 34;
+    -fx-text-fill: #19334f;
+}
+
+#displayModeLabel {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 17;
+    -fx-text-fill: #19334f;
+}
+
+#displayModeChoice {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 15;
+    -fx-pref-width: 230;
+    -fx-pref-height: 38;
+}
+
+#displayModeChoice .list-cell {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 14;
+}
+
+#displayModeStatus {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 13;
+    -fx-text-fill: #526679;
 }
 
 #gameOverLabel {
@@ -282,4 +312,22 @@
     -fx-background-size: 316 48;
     -fx-pref-width: 316;
     -fx-pref-height: 48;
+}
+
+.shop-continue-button:pressed {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 14;
+    -fx-background-image: url("res/btn_pressed.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: 316 48;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.shop-continue-button:focused {
+    -fx-background-size: 316 48;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
 }

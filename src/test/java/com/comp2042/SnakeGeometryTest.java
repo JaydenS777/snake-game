@@ -28,11 +28,23 @@ class SnakeGeometryTest {
     }
 
     @Test
-    void turnSpriteRotationMatchesExistingCornerOrientations() {
-        assertEquals(180, SnakeGeometry.turnRotation(SnakeGeometry.LEFT, SnakeGeometry.UP));
-        assertEquals(270, SnakeGeometry.turnRotation(SnakeGeometry.UP, SnakeGeometry.RIGHT));
-        assertEquals(90, SnakeGeometry.turnRotation(SnakeGeometry.DOWN, SnakeGeometry.LEFT));
-        assertEquals(0, SnakeGeometry.turnRotation(SnakeGeometry.RIGHT, SnakeGeometry.DOWN));
+    void turnSpriteRotationMatchesAllFourCorners() {
+        assertEquals(0, SnakeGeometry.turnRotation(SnakeGeometry.DOWN, SnakeGeometry.LEFT));
+        assertEquals(0, SnakeGeometry.turnRotation(SnakeGeometry.RIGHT, SnakeGeometry.UP));
+        assertEquals(90, SnakeGeometry.turnRotation(SnakeGeometry.DOWN, SnakeGeometry.RIGHT));
+        assertEquals(90, SnakeGeometry.turnRotation(SnakeGeometry.LEFT, SnakeGeometry.UP));
+        assertEquals(180, SnakeGeometry.turnRotation(SnakeGeometry.UP, SnakeGeometry.RIGHT));
+        assertEquals(180, SnakeGeometry.turnRotation(SnakeGeometry.LEFT, SnakeGeometry.DOWN));
+        assertEquals(270, SnakeGeometry.turnRotation(SnakeGeometry.UP, SnakeGeometry.LEFT));
+        assertEquals(270, SnakeGeometry.turnRotation(SnakeGeometry.RIGHT, SnakeGeometry.DOWN));
         assertEquals(-1, SnakeGeometry.turnRotation(SnakeGeometry.LEFT, SnakeGeometry.LEFT));
+    }
+
+    @Test
+    void tailPointsAwayFromTheSnakeBodyInAllDirections() {
+        assertEquals(0, SnakeGeometry.tailRotation(SnakeGeometry.UP));
+        assertEquals(90, SnakeGeometry.tailRotation(SnakeGeometry.RIGHT));
+        assertEquals(180, SnakeGeometry.tailRotation(SnakeGeometry.DOWN));
+        assertEquals(270, SnakeGeometry.tailRotation(SnakeGeometry.LEFT));
     }
 }

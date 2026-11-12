@@ -235,17 +235,13 @@ public class GameController {
         }
 
         if (event.getCode().equals(KeyCode.PLUS)) {
+            Main.getViewManager().applyDisplayMode(true);
             gameView.scaleToFullscreen(true, stage, obstacle, snek, coins);
-            gameView.gameOverLabel.setStyle("-fx-font-size: 50;");
-            gameView.gameWonLabel.setStyle("-fx-font-size: 50;");
-            gameView.scoreLabel.setStyle("-fx-font-size: 35;");
         }
 
         if (event.getCode().equals(KeyCode.MINUS)) {
+            Main.getViewManager().applyDisplayMode(false);
             gameView.scaleToFullscreen(false, stage, obstacle, snek, coins);
-            gameView.gameOverLabel.setStyle("-fx-font-size: 15;");
-            gameView.gameWonLabel.setStyle("-fx-font-size: 15;");
-            gameView.scoreLabel.setStyle("-fx-font-size: 15;");
         }
 
     }
@@ -326,9 +322,7 @@ public class GameController {
         pauseState.reset();
         gameView.setPaused(false);
 
-        MainMenuController mainMenuController = new MainMenuController();
-        mainMenuController.getViewManager().getPrimaryStage().show();
-        mainMenuController.getViewManager().getGameStage().close();
+        Main.getViewManager().showMainMenu();
     }
 
     private boolean valKey(KeyCode requestedKey) {

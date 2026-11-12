@@ -64,7 +64,7 @@ public class Coin {
 
     public Image getImage() {
         if (image == null) {
-            image = new Image("resources/views/res/redcoin.png");
+            image = new Image("resources/views/res/redcoin-v4.png");
         }
         return image;
     }

@@ -15,6 +15,10 @@ public class Game {
     private boolean noBorder;
 
     public Game(int x, int y, boolean powerUp, char difficulty) {
+        this(x, y, powerUp, difficulty, y > 50 ? 10 : 20);
+    }
+
+    public Game(int x, int y, boolean powerUp, char difficulty, int cellSize) {
         if (difficulty == 'E') {
             speed = 8.5;
             noBorder = true;
@@ -30,11 +34,7 @@ public class Game {
         height = y;
         maxScore = x * y - 2;
         this.powerUp = powerUp;
-        if (height > 50) {
-            multiplier = 10;
-        } else {
-            multiplier = 20;
-        }
+        multiplier = cellSize;
     }
 
     public boolean gameWon() {

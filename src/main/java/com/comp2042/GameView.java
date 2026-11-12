@@ -1,6 +1,5 @@
 package com.comp2042;
 
-import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -50,7 +49,9 @@ public class GameView {
     private double initX;
     private double initY;
     private double fullScale = 1;
-    private boolean fullsize = false;
+    private VBox pausePanel;
+    private VBox gameOverPanel;
+    private VBox shopPanel;
     public GameView(Game game) {
         this.game = game;
     }
@@ -73,11 +74,10 @@ public class GameView {
         shopOverlay.setVisible(visible);
     }
 
-    public void makeScene(Scene scene, Snake snek, List<Coin> coins) {
-        Scene gameScene = scene;
-        gridCanvas = new Canvas(gameScene.getWidth(), gameScene.getHeight());
-        initX = scene.getWidth();
-        initY = scene.getHeight();
+    public void makeScene(Snake snek, List<Coin> coins) {
+        initX = game.getWidth() * game.getMultiplier();
+        initY = game.getHeight() * game.getMultiplier();
+        gridCanvas = new Canvas(initX, initY);
         gc = gridCanvas.getGraphicsContext2D();
         drawGrid(coins, snek, gc);
 
@@ -123,7 +123,7 @@ public class GameView {
         pauseRestartButton = createPauseButton("Restart Game");
         exitToMenuButton = createPauseButton("Exit to Menu");
 
-        VBox pausePanel = new VBox(14, pauseTitle, resumeButton, pauseRestartButton, exitToMenuButton);
+        pausePanel = new VBox(14, pauseTitle, resumeButton, pauseRestartButton, exitToMenuButton);
         pausePanel.setId("pausePanel");
         pausePanel.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         pausePanel.setAlignment(javafx.geometry.Pos.CENTER);
@@ -151,7 +151,7 @@ public class GameView {
         gameOverRestartButton = createOverlayButton("Restart", "game-over-menu-button");
         gameOverExitButton = createOverlayButton("Main Menu", "game-over-menu-button");
 
-        VBox gameOverPanel = new VBox(16, gameOverTitle, finalScoreLabel,
+        gameOverPanel = new VBox(16, gameOverTitle, finalScoreLabel,
                 gameOverRestartButton, gameOverExitButton);
         gameOverPanel.setId("gameOverPanel");
         gameOverPanel.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
@@ -188,7 +188,7 @@ public class GameView {
         shopContinueButton = createOverlayButton("Continue Game", "shop-continue-button");
         shopContinueButton.setPrefSize(316, 48);
 
-        VBox shopPanel = new VBox(12, shopTitle, shopSubtitle, shopStatusRow,
+        shopPanel = new VBox(12, shopTitle, shopSubtitle, shopStatusRow,
                 shopItems, shopContinueButton);
         shopPanel.setId("shopPanel");
         shopPanel.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
@@ -231,32 +231,43 @@ public class GameView {
     }
 
     public void scaleToFullscreen(boolean fullScreen, Stage primaryStage, Obstacle obstacle, Snake snek, List<Coin> coins) {
-        primaryStage.setFullScreen(fullScreen);
-
-        double xScaling = Screen.getPrimary().getVisualBounds().getHeight() / initY;
-        double yScaling = Screen.getPrimary().getVisualBounds().getWidth() / initX;
-
-        if (fullScreen && !fullsize) {
-            if (xScaling < yScaling) {
-                fullScale = xScaling;
-            } else {
-                fullScale = yScaling;
-            }
-            gridCanvas.setWidth(gridCanvas.getWidth() * fullScale);
-            gridCanvas.setHeight(gridCanvas.getHeight() * fullScale);
-            fullsize = true;
-        } else if (!fullScreen) {
-            fullScale = 1;
-            gridCanvas.setWidth(initX);
-            gridCanvas.setHeight(initY);
-            fullsize = false;
+        if (primaryStage.isFullScreen() != fullScreen) {
+            primaryStage.setFullScreen(fullScreen);
+        }
+        if (fullScreen) {
+            fullScale = DisplayScale.fullscreenScale(Screen.getPrimary().getBounds().getWidth(),
+                    Screen.getPrimary().getBounds().getHeight(), initX, initY);
+        } else {
+            fullScale = DisplayScale.windowedScale(Screen.getPrimary().getVisualBounds().getWidth(),
+                    Screen.getPrimary().getVisualBounds().getHeight(), initX, initY);
         }
 
-        gameOverLabel.setFont(new Font("Arial", 25 * fullScale));
-        gameWonLabel.setFont(new Font("Arial", 25 * fullScale));
-        restartButton.setFont(new Font("Arial", 18 * fullScale));
-        restartButton.setPrefSize(140 * fullScale, 48 * fullScale);
+        gridCanvas.setWidth(initX * fullScale);
+        gridCanvas.setHeight(initY * fullScale);
+        if (!fullScreen) {
+            primaryStage.sizeToScene();
+        }
+
+        updateDisplayTextScale();
         drawGrid(coins, snek, obstacle, gc, false, 0);
+    }
+
+    private void updateDisplayTextScale() {
+        double referenceScale = Math.min(initX / 400.0, initY / 400.0) * fullScale;
+        double textScale = DisplayScale.uiScale(referenceScale);
+        gameOverLabel.setFont(new Font("Arial", 25 * textScale));
+        gameWonLabel.setFont(new Font("Arial", 25 * textScale));
+        restartButton.setFont(new Font("Arial", 18 * textScale));
+        restartButton.setPrefSize(140 * textScale, 48 * textScale);
+        scoreLabel.setStyle("-fx-font-size: " + (20 * textScale) + "px;");
+        timeLabel.setStyle("-fx-font-size: " + (18 * textScale) + "px;");
+        resumeCountdownLabel.setStyle("-fx-font-size: " + (84 * textScale) + "px;");
+        pausePanel.setScaleX(textScale);
+        pausePanel.setScaleY(textScale);
+        gameOverPanel.setScaleX(textScale);
+        gameOverPanel.setScaleY(textScale);
+        shopPanel.setScaleX(textScale);
+        shopPanel.setScaleY(textScale);
     }
 
     public void drawGrid(List<Coin> coins, Snake snek, Obstacle obstacle, GraphicsContext gc, boolean a, int b) {
@@ -265,14 +276,7 @@ public class GameView {
 
         drawCoins(coins, gc);
 
-        List<Point> body = snek.getBody();
-        int bodyIndex = 0;
-        for (Point point : body) {
-            drawBody(snek, body, snek.getHead(), point, bodyIndex);
-            bodyIndex++;
-        }
-
-        drawHead(snek);
+        drawSnake(snek);
 
         gc.setFill(obstacle.getColor());
         for (Point point : obstacle.getObstacles()) {
@@ -286,17 +290,21 @@ public class GameView {
 
         drawCoins(coins, gc);
 
-        List<Point> body = snek.getBody();
-        int bodyIndex = 0;
-        for (Point point : body) {
-            drawBody(snek, body, snek.getHead(), point, bodyIndex);
-            bodyIndex++;
-        }
+        drawSnake(snek);
+    }
 
+    private void drawSnake(Snake snek) {
+        gc.setImageSmoothing(false);
+        List<Point> body = snek.getBody();
+        for (int index = 0; index < body.size(); index++) {
+            drawBody(snek, body, snek.getHead(), body.get(index), index);
+        }
         drawHead(snek);
+        gc.setImageSmoothing(true);
     }
 
     private void drawCoins(List<Coin> coins, GraphicsContext gc) {
+        gc.setImageSmoothing(false);
         for (Coin coin : coins) {
             Point position = coin.getPos();
             gc.drawImage(coin.getImage(), (position.x * game.getMultiplier()) * fullScale,
@@ -304,6 +312,7 @@ public class GameView {
                     game.getMultiplier() * fullScale - 3 * fullScale,
                     game.getMultiplier() * fullScale - 3 * fullScale);
         }
+        gc.setImageSmoothing(true);
     }
 
     private void drawHead(Snake snek) {
@@ -321,9 +330,9 @@ public class GameView {
 
         if (index == 0) {
             Point nextSegment = body.size() > 1 ? body.get(1) : head;
-            int tailDirection = SnakeGeometry.directionBetween(point, nextSegment,
+            int directionToHead = SnakeGeometry.directionBetween(point, nextSegment,
                     game.getWidth(), game.getHeight());
-            snek.getImageViewTail().setRotate(tailDirection);
+            snek.getImageViewTail().setRotate(SnakeGeometry.tailRotation(directionToHead));
             rotatedImage = snek.getImageViewTail().snapshot(params, null);
         } else {
             Point previousSegment = body.get(index - 1);
@@ -335,7 +344,7 @@ public class GameView {
             int turnRotation = SnakeGeometry.turnRotation(incomingDirection, outgoingDirection);
 
             if (turnRotation >= 0) {
-                // Preserve the existing corner-sprite rotations, now derived from adjacent cells.
+                // Rotate the top-left base corner to match the two neighboring cells.
                 snek.getImageViewTurn().setRotate(turnRotation);
                 rotatedImage = snek.getImageViewTurn().snapshot(params, null);
             } else {
@@ -345,10 +354,8 @@ public class GameView {
             }
         }
 
-        gc.drawImage(rotatedImage, (point.x * game.getMultiplier()) * fullScale,
-                (point.y * game.getMultiplier()) * fullScale,
-                game.getMultiplier() * fullScale * fullScale,
-                game.getMultiplier() * fullScale * fullScale);
+        double cellSize = game.getMultiplier() * fullScale;
+        gc.drawImage(rotatedImage, point.x * cellSize, point.y * cellSize, cellSize, cellSize);
     }
 
     public void gameOver(Snake snek) {
