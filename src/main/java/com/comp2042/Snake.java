@@ -22,6 +22,7 @@ public class Snake {
     private ImageView imageBody;
     private ImageView imageTurn;
     private ImageView imageTail;
+    private Image spriteSheet;
     private int snakeDir = 270;
     private char direction = 'L';
 
@@ -184,18 +185,20 @@ public class Snake {
         return imageTail;
     }
 
+    Image getSpriteSheet() {
+        loadImages();
+        return spriteSheet;
+    }
+
     private void loadImages() {
         if (imageHead != null) {
             return;
         }
 
-        imageHead = new ImageView(new Image("resources/views/res/snakehead-v2.png"));
-        imageBody = new ImageView(new Image("resources/views/res/snakebody-v2.png"));
-        imageTurn = new ImageView(new Image("resources/views/res/snaketurn-v2.png"));
-        imageTail = new ImageView(new Image("resources/views/res/snaketail-v2.png"));
-        imageHead.setSmooth(false);
-        imageBody.setSmooth(false);
-        imageTurn.setSmooth(false);
-        imageTail.setSmooth(false);
+        spriteSheet = SnakeSpriteSheet.load();
+        imageHead = SnakeSpriteSheet.createView(spriteSheet, SnakeSpriteSheet.HEAD);
+        imageBody = SnakeSpriteSheet.createView(spriteSheet, SnakeSpriteSheet.BODY);
+        imageTurn = SnakeSpriteSheet.createView(spriteSheet, SnakeSpriteSheet.TURN);
+        imageTail = SnakeSpriteSheet.createView(spriteSheet, SnakeSpriteSheet.TAIL);
     }
 }

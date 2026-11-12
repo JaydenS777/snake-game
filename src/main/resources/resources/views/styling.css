@@ -91,8 +91,18 @@
     -fx-font-size: 30;
 }
 #scoreLabel {
-    -fx-font-family: "SF Pixelate";
+    -fx-font-family: "SF Pixelate Shaded";
     -fx-font-size: 20;
+    -fx-text-fill: #fffbe5;
+}
+
+#scoreHud {
+    -fx-background-color: #0e2b17;
+    -fx-background-radius: 18;
+    -fx-border-color: #9ce845;
+    -fx-border-width: 3;
+    -fx-border-radius: 18;
+    -fx-padding: 5 14 5 10;
 }
 
 #timeLabel {
@@ -258,10 +268,94 @@
 }
 
 #shopPointsLabel {
-    -fx-font-family: "SF Pixelate";
-    -fx-font-size: 14;
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 16;
     -fx-text-fill: #19334f;
-    -fx-padding: 0 0 0 4;
+    -fx-padding: 0 4 0 0;
+}
+
+#shopCurrency {
+    -fx-background-color: #f2f5f7;
+    -fx-background-radius: 7;
+    -fx-border-color: #8ebf42;
+    -fx-border-width: 2;
+    -fx-border-radius: 7;
+    -fx-padding: 3 9 3 7;
+}
+
+#timeHud {
+    -fx-background-color: #0e2b17;
+    -fx-background-radius: 22;
+    -fx-border-color: #9ce845;
+    -fx-border-width: 4;
+    -fx-border-radius: 22;
+    -fx-padding: 18 22 18 22;
+}
+
+#timeLabel {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 32;
+    -fx-text-fill: #f4ead5;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.timer-hourglass {
+    -fx-font-size: 34;
+    -fx-text-fill: #f2c14e;
+}
+
+#gameRoot {
+    -fx-background-color: #07210b;
+}
+
+#gameSidebar {
+    -fx-background-color: #061e0b;
+    -fx-padding: 18;
+    -fx-border-color: #255d21;
+    -fx-border-width: 0 3 0 0;
+}
+
+.sidebar-heading {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 29;
+    -fx-text-fill: #fffbe5;
+    -fx-padding: 2 0 4 2;
+}
+
+.sidebar-section-heading {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 22;
+    -fx-text-fill: #fffbe5;
+}
+
+#sidebarCoinPanel,
+#sidebarSkillsPanel {
+    -fx-background-color: #0a2911;
+    -fx-background-radius: 20;
+    -fx-border-color: #9ce845;
+    -fx-border-width: 3;
+    -fx-border-radius: 20;
+    -fx-padding: 18;
+}
+
+#sidebarSkillsPanel {
+    -fx-min-height: 220;
+}
+
+#gamePlayfield {
+    -fx-background-color: #07210b;
+    -fx-background-radius: 28;
+    -fx-border-color: #a5ed4b;
+    -fx-border-width: 5;
+    -fx-border-radius: 28;
+    -fx-padding: 18;
+}
+
+.shop-coin-mark {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 18;
+    -fx-text-fill: #fff4a6;
 }
 
 .shop-refresh-button {
@@ -330,4 +424,184 @@
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-border-color: transparent;
+}
+
+#shopOverlay {
+    -fx-background-color: #07210b;
+}
+
+#shopScreen {
+    -fx-background-color: #07210b;
+}
+
+#shopHeader {
+    -fx-spacing: 18;
+    -fx-padding: 0 0 18 0;
+    -fx-border-color: transparent transparent #225b24 transparent;
+    -fx-border-width: 0 0 3 0;
+}
+
+.shop-back-button {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 38;
+    -fx-text-fill: #fff4d8;
+    -fx-background-color: #0d3216;
+    -fx-background-image: none;
+    -fx-background-radius: 22;
+    -fx-border-color: #9ce845;
+    -fx-border-width: 4;
+    -fx-border-radius: 22;
+    -fx-pref-width: 82;
+    -fx-pref-height: 76;
+}
+
+.shop-back-button:pressed,
+.shop-back-button:focused {
+    -fx-background-image: none;
+    -fx-background-color: #0d3216;
+    -fx-background-radius: 22;
+    -fx-border-color: #9ce845;
+    -fx-border-width: 4;
+    -fx-border-radius: 22;
+}
+
+#shopTitle {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 54;
+    -fx-text-fill: #fffbe5;
+}
+
+#shopCurrency {
+    -fx-background-color: #082610;
+    -fx-background-radius: 26;
+    -fx-border-color: #9ce845;
+    -fx-border-width: 4;
+    -fx-border-radius: 26;
+    -fx-padding: 8 28 8 18;
+}
+
+#shopPointsLabel {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 40;
+    -fx-text-fill: #fffbe5;
+}
+
+#shopSidebar {
+    -fx-padding: 30 0 0 0;
+}
+
+.shop-skills-tab {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 29;
+    -fx-text-fill: #06210b;
+    -fx-background-color: #a6f047;
+    -fx-background-image: none;
+    -fx-background-radius: 26;
+    -fx-border-color: #c0ff60;
+    -fx-border-width: 3;
+    -fx-border-radius: 26;
+    -fx-pref-width: 270;
+    -fx-pref-height: 108;
+}
+
+.shop-skills-tab:pressed,
+.shop-skills-tab:focused {
+    -fx-background-image: none;
+    -fx-background-color: #a6f047;
+    -fx-background-radius: 26;
+    -fx-border-color: #c0ff60;
+    -fx-border-width: 3;
+    -fx-border-radius: 26;
+}
+
+#shopPanel {
+    -fx-background-color: #06220c;
+    -fx-background-radius: 36;
+    -fx-border-color: #a5ed4b;
+    -fx-border-width: 5;
+    -fx-border-radius: 36;
+    -fx-padding: 28 34 32 34;
+}
+
+#chooseSkillTitle {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 44;
+    -fx-text-fill: #fffbe5;
+    -fx-padding: 0 0 12 0;
+}
+
+#shopFooter {
+    -fx-spacing: 54;
+    -fx-padding: 14 0 0 0;
+}
+
+.shop-refresh-button {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 24;
+    -fx-text-fill: #fffbe5;
+    -fx-background-color: #16421d;
+    -fx-background-image: none;
+    -fx-background-radius: 24;
+    -fx-border-color: #a5ed4b;
+    -fx-border-width: 4;
+    -fx-border-radius: 24;
+    -fx-pref-width: 500;
+    -fx-pref-height: 92;
+    -fx-padding: 8 26 8 26;
+}
+
+.shop-refresh-button:pressed,
+.shop-refresh-button:focused {
+    -fx-background-image: none;
+    -fx-background-color: #16421d;
+    -fx-background-radius: 24;
+    -fx-border-color: #a5ed4b;
+    -fx-border-width: 4;
+    -fx-border-radius: 24;
+}
+
+.shop-refresh-button:disabled {
+    -fx-opacity: 0.5;
+}
+
+.shop-refresh-symbol {
+    -fx-font-family: "System";
+    -fx-font-size: 48;
+    -fx-text-fill: #a5ed4b;
+}
+
+.shop-footer-text {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 25;
+    -fx-text-fill: #fffbe5;
+}
+
+#shopRefreshCountLabel {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 15;
+    -fx-text-fill: #cfeaa0;
+}
+
+.shop-continue-button {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 30;
+    -fx-text-fill: #06210b;
+    -fx-background-color: #a6f047;
+    -fx-background-image: none;
+    -fx-background-radius: 24;
+    -fx-border-color: #c0ff60;
+    -fx-border-width: 4;
+    -fx-border-radius: 24;
+    -fx-pref-width: 430;
+    -fx-pref-height: 92;
+}
+
+.shop-continue-button:pressed,
+.shop-continue-button:focused {
+    -fx-background-image: none;
+    -fx-background-color: #a6f047;
+    -fx-background-radius: 24;
+    -fx-border-color: #c0ff60;
+    -fx-border-width: 4;
+    -fx-border-radius: 24;
 }

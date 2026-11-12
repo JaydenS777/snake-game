@@ -27,6 +27,7 @@ public class GameController {
     private final PauseState pauseState = new PauseState();
     private final ResumeCountdown resumeCountdown = new ResumeCountdown();
     private final ShopCountdown shopCountdown = new ShopCountdown();
+    private final ShopRefreshRules shopRefreshRules = new ShopRefreshRules();
     private final Timeline resumeCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> advanceResumeCountdown()));
     private final Timeline shopCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> tickShopCountdown()));
     private Timeline coinSpawnTimeline;
@@ -34,16 +35,28 @@ public class GameController {
     private boolean shopOpen;
     private boolean resumeCountdownRunning;
     private boolean resumeAnimationAfterCountdown;
+    private boolean resumeFromShopCountdown;
 
     private void advanceResumeCountdown() {
         String number = resumeCountdown.advance();
         gameView.showResumeCountdown(number);
         if (!resumeCountdown.isActive()) {
             resumeCountdownRunning = false;
-            if (resumeAnimationAfterCountdown && !gameEnded(game, snek)) {
+            if (resumeFromShopCountdown && !gameEnded(game, snek)) {
+                resumeFromShopCountdown = false;
+                resumeAnimationAfterCountdown = false;
+                shopOpen = false;
+                shopCountdown.reset();
+                gameView.updateTimeLabel(shopCountdown.getRemainingSeconds());
+                gameView.startTimeProgress();
+                animation.play();
+                shopCountdownTimeline.playFromStart();
+                resumeCoinSpawner();
+            } else if (resumeAnimationAfterCountdown && !gameEnded(game, snek)) {
                 animation.play();
                 if (!shopCountdown.isFinished()) {
                     shopCountdownTimeline.play();
+                    gameView.resumeTimeProgress();
                 }
                 resumeCoinSpawner();
             }
@@ -53,6 +66,7 @@ public class GameController {
     private void tickShopCountdown() {
         if (gameEnded(game, snek)) {
             shopCountdownTimeline.stop();
+            gameView.stopTimeProgress();
             return;
         }
 
@@ -63,6 +77,7 @@ public class GameController {
             animation.pause();
             pauseCoinSpawner();
             shopOpen = true;
+            shopRefreshRules.reset();
             gameView.showShop(game.getScorePoints());
         }
     }
@@ -148,6 +163,7 @@ public class GameController {
 
     private final Timeline animation = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
         if (gameEnded(game, snek)) {
+            gameView.stopTimeProgress();
             return;
         } else {
 
@@ -173,6 +189,7 @@ public class GameController {
                         gameView.updateScoreLabel();
                         ((Timeline) event.getSource()).stop();
                         shopCountdownTimeline.stop();
+                        gameView.stopTimeProgress();
                         stopCoinSpawner();
                         return;
                     }
@@ -190,6 +207,7 @@ public class GameController {
             gameView.updateScoreLabel();
             if (gameEnded(game, snek)) {
                 shopCountdownTimeline.stop();
+                gameView.stopTimeProgress();
                 stopCoinSpawner();
             }
         }
@@ -219,6 +237,9 @@ public class GameController {
         if (event.getCode().isArrowKey() && !gameEnded(game, snek)) {
             animation.play();
             if (!shopCountdown.isFinished()) {
+                if (shopCountdownTimeline.getStatus() == Animation.Status.STOPPED) {
+                    gameView.startTimeProgress();
+                }
                 shopCountdownTimeline.play();
             }
             startCoinSpawner();
@@ -231,7 +252,7 @@ public class GameController {
 
         if (event.getCode().equals(KeyCode.TAB)) {
             reset();
-            gameView.scoreLabel.setText("Score: " + game.getScorePoints());
+            gameView.updateScoreLabel();
         }
 
         if (event.getCode().equals(KeyCode.PLUS)) {
@@ -276,6 +297,7 @@ public class GameController {
         if (animationWasRunning) {
             animation.pause();
             shopCountdownTimeline.pause();
+            gameView.pauseTimeProgress();
             pauseCoinSpawner();
         }
         gameView.setPaused(true);
@@ -297,25 +319,40 @@ public class GameController {
     }
 
     public void continueFromShop() {
-        if (!shopOpen || gameEnded(game, snek)) {
+        if (!shopOpen || gameEnded(game, snek) || resumeCountdownRunning) {
             return;
         }
 
-        shopOpen = false;
         gameView.setShopVisible(false);
-        shopCountdown.reset();
-        gameView.updateTimeLabel(shopCountdown.getRemainingSeconds());
-        animation.play();
-        shopCountdownTimeline.playFromStart();
-        resumeCoinSpawner();
+        resumeFromShopCountdown = true;
+        resumeAnimationAfterCountdown = true;
+        resumeCountdown.start();
+        resumeCountdownRunning = true;
+        gameView.showResumeCountdown(resumeCountdown.currentNumber());
+        resumeCountdownTimeline.setCycleCount(3);
+        resumeCountdownTimeline.playFromStart();
+    }
+
+    public void refreshShop() {
+        if (!shopOpen || !shopRefreshRules.canRefresh(game.getScorePoints())) {
+            gameView.updateShop(game.getScorePoints(), shopRefreshRules.refreshesUsed());
+            return;
+        }
+        if (game.spendPoints(ShopRefreshRules.COST)) {
+            shopRefreshRules.recordRefresh(game.getScorePoints() + ShopRefreshRules.COST);
+            gameView.updateScoreLabel();
+            gameView.updateShop(game.getScorePoints(), shopRefreshRules.refreshesUsed());
+        }
     }
 
     public void exitToMenu() {
         resumeCountdownTimeline.stop();
         resumeCountdownRunning = false;
+        resumeFromShopCountdown = false;
         gameView.showResumeCountdown("");
         animation.stop();
         shopCountdownTimeline.stop();
+        gameView.stopTimeProgress();
         stopCoinSpawner();
         shopOpen = false;
         gameView.setShopVisible(false);
@@ -343,11 +380,13 @@ public class GameController {
         resumeCountdownTimeline.stop();
         resumeCountdownRunning = false;
         resumeAnimationAfterCountdown = false;
+        resumeFromShopCountdown = false;
         gameView.showResumeCountdown("");
         shopOpen = false;
         gameView.setShopVisible(false);
         stopCoinSpawner();
         shopCountdownTimeline.stop();
+        gameView.stopTimeProgress();
         shopCountdown.reset();
         gameView.updateTimeLabel(shopCountdown.getRemainingSeconds());
         animation.jumpTo(Duration.ZERO);
@@ -375,6 +414,7 @@ public class GameController {
     public void restart() {
         reset();
         animation.playFromStart();
+        gameView.startTimeProgress();
         shopCountdownTimeline.playFromStart();
         startCoinSpawner();
     }

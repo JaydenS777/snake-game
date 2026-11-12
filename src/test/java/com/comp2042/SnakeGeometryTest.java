@@ -47,4 +47,12 @@ class SnakeGeometryTest {
         assertEquals(180, SnakeGeometry.tailRotation(SnakeGeometry.DOWN));
         assertEquals(270, SnakeGeometry.tailRotation(SnakeGeometry.LEFT));
     }
+
+    @Test
+    void bodyTileRotationMatchesAllFourTailToHeadDirections() {
+        assertEquals(0, SnakeGeometry.bodyRotation(SnakeGeometry.DOWN));
+        assertEquals(90, SnakeGeometry.bodyRotation(SnakeGeometry.LEFT));
+        assertEquals(180, SnakeGeometry.bodyRotation(SnakeGeometry.UP));
+        assertEquals(270, SnakeGeometry.bodyRotation(SnakeGeometry.RIGHT));
+    }
 }

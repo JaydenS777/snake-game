@@ -1,8 +1,10 @@
 package com.comp2042;
 
 final class GameDimensions {
-    static final int CELL_SIZE = 40;
+    static final int CELL_SIZE = 50;
     static final double WINDOWED_SCREEN_FRACTION = 0.8;
+    static final double SIDEBAR_GAME_WIDTH_FRACTION = 0.65;
+    static final double SIDEBAR_GAME_HEIGHT_FRACTION = 0.88;
 
     private GameDimensions() {
     }
@@ -14,6 +16,11 @@ final class GameDimensions {
     static Grid forWindowed(double screenWidth, double screenHeight) {
         return fit(screenWidth * WINDOWED_SCREEN_FRACTION,
                 screenHeight * WINDOWED_SCREEN_FRACTION);
+    }
+
+    static Grid forSidebarLayout(double viewportWidth, double viewportHeight) {
+        return fit(viewportWidth * SIDEBAR_GAME_WIDTH_FRACTION,
+                viewportHeight * SIDEBAR_GAME_HEIGHT_FRACTION);
     }
 
     private static Grid fit(double width, double height) {

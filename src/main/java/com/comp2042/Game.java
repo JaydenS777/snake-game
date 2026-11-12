@@ -74,6 +74,14 @@ public class Game {
         scorePoints += n;
     }
 
+    public boolean spendPoints(int amount) {
+        if (amount < 0 || scorePoints < amount) {
+            return false;
+        }
+        scorePoints -= amount;
+        return true;
+    }
+
     public int getScorePoints() {
         return scorePoints;
     }

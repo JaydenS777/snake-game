@@ -15,6 +15,45 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SnakeSpriteAssetsTest {
     @Test
+    void runtimeSpriteLoaderFindsTheSheetOnTheApplicationClasspath() {
+        assertNotNull(SnakeSpriteSheet.resourceUrl());
+    }
+
+    @Test
+    void timerPanelReferenceImageIsAvailableAtItsOriginalResolution() throws IOException {
+        BufferedImage image = load("timer-ui-reference.jpg");
+        assertEquals(1073, image.getWidth());
+        assertEquals(445, image.getHeight());
+    }
+
+    @Test
+    void shopCurrencyCoinIsTheSMarkedCoinWithTransparentCorners() throws IOException {
+        BufferedImage coin = load("shop-coin.png");
+
+        assertTrue(coin.getWidth() > 0);
+        assertTrue(coin.getHeight() > 0);
+        assertEquals(0, coin.getRGB(0, 0) >>> 24);
+        assertEquals(0, coin.getRGB(coin.getWidth() - 1, 0) >>> 24);
+        assertEquals(0, coin.getRGB(0, coin.getHeight() - 1) >>> 24);
+        assertEquals(0, coin.getRGB(coin.getWidth() - 1, coin.getHeight() - 1) >>> 24);
+        assertTrue((coin.getRGB(coin.getWidth() / 2, coin.getHeight() / 2) >>> 24) > 0);
+    }
+
+    @Test
+    void approvedSpriteSheetHasFourValidArtworkRegions() throws IOException {
+        BufferedImage sheet = load("snake-sprites.png");
+
+        assertEquals(SnakeSpriteSheet.IMAGE_WIDTH, sheet.getWidth());
+        assertEquals(SnakeSpriteSheet.IMAGE_HEIGHT, sheet.getHeight());
+        for (SnakeSpriteSheet.SpriteRegion region : new SnakeSpriteSheet.SpriteRegion[]{
+                SnakeSpriteSheet.HEAD, SnakeSpriteSheet.BODY,
+                SnakeSpriteSheet.TURN, SnakeSpriteSheet.TAIL}) {
+            assertTrue(region.fitsInside(sheet.getWidth(), sheet.getHeight()));
+            assertTrue(hasVisiblePixel(sheet, region));
+        }
+    }
+
+    @Test
     void snakeSpritesHaveMatchingCellDimensions() throws IOException {
         for (String name : new String[]{"snakehead-v2.png", "snakebody-v2.png",
                 "snaketurn-v2.png", "snaketail-v2.png"}) {
@@ -60,5 +99,14 @@ class SnakeSpriteAssetsTest {
 
     private int[] column(BufferedImage image, int x) {
         return image.getRGB(x, 0, 1, image.getHeight(), null, 0, 1);
+    }
+
+    private boolean hasVisiblePixel(BufferedImage image, SnakeSpriteSheet.SpriteRegion region) {
+        for (int y = region.y(); y < region.y() + region.height(); y++) {
+            for (int x = region.x(); x < region.x() + region.width(); x++) {
+                if ((image.getRGB(x, y) >>> 24) > 16) return true;
+            }
+        }
+        return false;
     }
 }

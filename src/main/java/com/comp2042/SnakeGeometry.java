@@ -50,4 +50,15 @@ final class SnakeGeometry {
         int tailDirection = (directionFromTailToHead + 180) % 360;
         return (tailDirection - DOWN + 360) % 360;
     }
+
+    /** Rotation for a body tile whose unrotated path runs downward from tail to head. */
+    static int bodyRotation(int directionFromTailToHead) {
+        return switch (directionFromTailToHead) {
+            case DOWN -> 0;
+            case LEFT -> 90;
+            case UP -> 180;
+            case RIGHT -> 270;
+            default -> throw new IllegalArgumentException("Unknown snake body direction.");
+        };
+    }
 }

@@ -2,12 +2,10 @@ package com.comp2042;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -122,9 +120,13 @@ public class MainMenuController {
         Rectangle2D bounds = viewManager.isFullscreenMode()
                 ? Screen.getPrimary().getBounds()
                 : Screen.getPrimary().getVisualBounds();
-        GameDimensions.Grid grid = viewManager.isFullscreenMode()
-                ? GameDimensions.forFullscreen(bounds.getWidth(), bounds.getHeight())
-                : GameDimensions.forWindowed(bounds.getWidth(), bounds.getHeight());
+        double viewportWidth = bounds.getWidth();
+        double viewportHeight = bounds.getHeight();
+        if (!viewManager.isFullscreenMode()) {
+            viewportWidth *= GameDimensions.WINDOWED_SCREEN_FRACTION;
+            viewportHeight *= GameDimensions.WINDOWED_SCREEN_FRACTION;
+        }
+        GameDimensions.Grid grid = GameDimensions.forSidebarLayout(viewportWidth, viewportHeight);
         Game game = new Game(grid.columns(), grid.rows(), POWER_UP, DIFFICULTY, grid.cellSize());
         obstacle = new Obstacle(game.getWidth(), game.getHeight());
         snek = new Snake(game.getWidth(), game.getHeight(), game.isNoBorder(), obstacle);
@@ -134,22 +136,12 @@ public class MainMenuController {
         gameView = new GameView(game);
         GameController controller = new GameController(snek, coins, game, gameView, obstacle, gameStage);
 
-        StackPane gamePane = new StackPane();
-        gamePane.setStyle("-fx-background-color: #feffe4;");
         gameScene = viewManager.getMainScene();
 
         gameScene.setOnKeyPressed(controller::handle);
         gameScene.setOnKeyReleased(controller::handleKeyReleased);
 
         gameView.makeScene(snek, coins);
-        gamePane.getChildren().addAll(gameView.gridCanvas, gameView.gameOverLabel, gameView.gameWonLabel,
-                gameView.timeLabel, gameView.scoreLabel, gameView.restartButton, gameView.pauseOverlay,
-                gameView.resumeCountdownOverlay, gameView.gameOverOverlay, gameView.shopOverlay);
-        gamePane.setAlignment(gameView.gameOverLabel, Pos.TOP_CENTER);
-        gamePane.setAlignment(gameView.gameWonLabel, Pos.TOP_CENTER);
-        gamePane.setAlignment(gameView.timeLabel, Pos.TOP_RIGHT);
-        gamePane.setAlignment(gameView.scoreLabel, Pos.BOTTOM_CENTER);
-        gamePane.setAlignment(gameView.restartButton, Pos.CENTER);
         gameView.restartButton.setOnAction(event -> controller.restart());
         gameView.resumeButton.setOnAction(event -> controller.resumeGame());
         gameView.pauseRestartButton.setOnAction(event -> controller.restart());
@@ -157,7 +149,9 @@ public class MainMenuController {
         gameView.gameOverRestartButton.setOnAction(event -> controller.restart());
         gameView.gameOverExitButton.setOnAction(event -> controller.exitToMenu());
         gameView.shopContinueButton.setOnAction(event -> controller.continueFromShop());
-        viewManager.showGameView(gamePane);
+        gameView.shopBackButton.setOnAction(event -> controller.continueFromShop());
+        gameView.shopRefreshButton.setOnAction(event -> controller.refreshShop());
+        viewManager.showGameView(gameView.createGameLayout());
     }
 
     public ViewManager getViewManager() {
