@@ -27,6 +27,23 @@ public class GameController {
     public static KeyCode key = KeyCode.LEFT;
     public static KeyCode lastKey = KeyCode.LEFT;
     private boolean keyPressed = false;
+    private boolean pauseKeyDown;
+    private final PauseState pauseState = new PauseState();
+    private final ResumeCountdown resumeCountdown = new ResumeCountdown();
+    private final Timeline resumeCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> advanceResumeCountdown()));
+    private boolean resumeCountdownRunning;
+    private boolean resumeAnimationAfterCountdown;
+
+    private void advanceResumeCountdown() {
+        String number = resumeCountdown.advance();
+        gameView.showResumeCountdown(number);
+        if (!resumeCountdown.isActive()) {
+            resumeCountdownRunning = false;
+            if (resumeAnimationAfterCountdown && !gameEnded(game, snek)) {
+                animation.play();
+            }
+        }
+    }
 
     private int legacyScoreMultiplier = 2;
 
@@ -91,6 +108,22 @@ public class GameController {
     }));
 
     public void handle(KeyEvent event) {
+        if (event.getCode().equals(KeyCode.ESCAPE) || event.getCode().equals(KeyCode.P)) {
+            if (!pauseKeyDown) {
+                pauseKeyDown = true;
+                togglePause();
+            }
+            return;
+        }
+
+        if (pauseState.isPaused()) {
+            return;
+        }
+
+        if (resumeCountdownRunning) {
+            return;
+        }
+
         if (event.getCode().isArrowKey() && !gameEnded(game, snek)) animation.play();
 
         if (!gameEnded(game, snek) && valKey(event.getCode()) && !keyPressed) {
@@ -98,10 +131,6 @@ public class GameController {
             key = event.getCode();
             keyPressed = true;
             gameView.turnDir(snek);
-        }
-
-        if (event.getCode().equals(KeyCode.P)) {
-            animation.stop();
         }
 
         if (event.getCode().equals(KeyCode.TAB)) {
@@ -123,11 +152,67 @@ public class GameController {
             gameView.scoreLabel.setStyle("-fx-font-size: 15;");
         }
 
-        if (event.getCode().equals(KeyCode.ESCAPE)) {
-            MainMenuController mainMenuController = new MainMenuController();
-            mainMenuController.getViewManager().getPrimaryStage().show();
-            mainMenuController.getViewManager().getGameStage().close();
+    }
+
+    public void handleKeyReleased(KeyEvent event) {
+        if (event.getCode().equals(KeyCode.ESCAPE) || event.getCode().equals(KeyCode.P)) {
+            pauseKeyDown = false;
         }
+    }
+
+    private void togglePause() {
+        if (gameEnded(game, snek)) {
+            return;
+        }
+
+        if (resumeCountdownRunning) {
+            resumeCountdownTimeline.stop();
+            resumeCountdownRunning = false;
+            pauseState.pause(resumeAnimationAfterCountdown);
+            gameView.showResumeCountdown("");
+            gameView.setPaused(true);
+            return;
+        }
+
+        if (pauseState.isPaused()) {
+            resumeGame();
+            return;
+        }
+
+        boolean animationWasRunning = animation.getStatus() == Animation.Status.RUNNING;
+        pauseState.pause(animationWasRunning);
+        if (animationWasRunning) {
+            animation.pause();
+        }
+        gameView.setPaused(true);
+    }
+
+    public void resumeGame() {
+        if (!pauseState.isPaused()) {
+            return;
+        }
+
+        boolean shouldResumeAnimation = pauseState.resume();
+        gameView.setPaused(false);
+        resumeAnimationAfterCountdown = shouldResumeAnimation;
+        resumeCountdown.start();
+        resumeCountdownRunning = true;
+        gameView.showResumeCountdown(resumeCountdown.currentNumber());
+        resumeCountdownTimeline.setCycleCount(3);
+        resumeCountdownTimeline.playFromStart();
+    }
+
+    public void exitToMenu() {
+        resumeCountdownTimeline.stop();
+        resumeCountdownRunning = false;
+        gameView.showResumeCountdown("");
+        animation.stop();
+        pauseState.reset();
+        gameView.setPaused(false);
+
+        MainMenuController mainMenuController = new MainMenuController();
+        mainMenuController.getViewManager().getPrimaryStage().show();
+        mainMenuController.getViewManager().getGameStage().close();
     }
 
     private boolean valKey(KeyCode requestedKey) {
@@ -145,8 +230,14 @@ public class GameController {
 
     private void reset() {
 
+        resumeCountdownTimeline.stop();
+        resumeCountdownRunning = false;
+        resumeAnimationAfterCountdown = false;
+        gameView.showResumeCountdown("");
         animation.jumpTo(Duration.ZERO);
         animation.stop();
+        pauseState.reset();
+        gameView.setPaused(false);
 
         snek = new Snake(game.getWidth(), game.getHeight(), game.isNoBorder(), obstacle);
         coin = new Coin(game.getWidth(), game.getHeight(), snek, obstacle);
@@ -166,6 +257,11 @@ public class GameController {
         gameView.updateScoreLabel();
 
         gameView.drawGrid(coin, snek, obstacle, gameView.gc, false, 0);
+    }
+
+    public void restart() {
+        reset();
+        animation.playFromStart();
     }
 
     private void powerCoin() {

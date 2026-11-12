@@ -64,3 +64,131 @@
     -fx-font-family: "SF Pixelate";
     -fx-font-size: 20;
 }
+
+#restartButton {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 18;
+    -fx-text-fill: #ffffff;
+    -fx-background-image: url("res/btn.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: 140 48;
+}
+
+#restartButton:pressed {
+    -fx-background-image: url("res/btn_pressed.png");
+}
+
+#pauseOverlay {
+    -fx-background-color: rgba(0, 0, 0, 0.55);
+}
+
+#pausePanel {
+    -fx-background-color: rgba(255, 255, 255, 0.96);
+    -fx-background-radius: 10;
+    -fx-border-color: #19334f;
+    -fx-border-width: 3;
+    -fx-border-radius: 10;
+    -fx-padding: 24 32 28 32;
+}
+
+#pauseTitle {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 28;
+    -fx-text-fill: #19334f;
+    -fx-padding: 0 0 8 0;
+}
+
+.pause-menu-button {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 17;
+    -fx-text-fill: #ffffff;
+    -fx-background-image: url("res/btn.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: 220 48;
+    -fx-pref-width: 220;
+    -fx-pref-height: 48;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.pause-menu-button:pressed {
+    -fx-background-image: url("res/btn_pressed.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: 220 48;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.pause-menu-button:focused {
+    -fx-background-size: 220 48;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.resume-countdown-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.35);
+}
+
+#resumeCountdownLabel {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 84;
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.9), 8, 0.6, 2, 2);
+}
+
+#gameOverOverlay {
+    -fx-background-color: rgba(0, 0, 0, 0.62);
+}
+
+#gameOverPanel {
+    -fx-background-color: rgba(255, 255, 255, 0.97);
+    -fx-background-radius: 10;
+    -fx-border-color: #19334f;
+    -fx-border-width: 3;
+    -fx-border-radius: 10;
+    -fx-padding: 28 34 32 34;
+}
+
+#gameOverTitle {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 30;
+    -fx-text-fill: #a32626;
+}
+
+#finalScoreLabel {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 19;
+    -fx-text-fill: #19334f;
+    -fx-padding: 0 0 8 0;
+}
+
+.game-over-menu-button {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 17;
+    -fx-text-fill: #ffffff;
+    -fx-background-image: url("res/btn.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: 220 48;
+    -fx-pref-width: 220;
+    -fx-pref-height: 48;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.game-over-menu-button:pressed {
+    -fx-background-image: url("res/btn_pressed.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: 220 48;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.game-over-menu-button:focused {
+    -fx-background-size: 220 48;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}

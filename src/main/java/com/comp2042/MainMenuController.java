@@ -40,13 +40,23 @@ public class MainMenuController {
         gameScene = new Scene(gamePane, game.getWidth() * game.getMultiplier(), game.getHeight() * game.getMultiplier());
 
         gameScene.setOnKeyPressed(controller::handle);
+        gameScene.setOnKeyReleased(controller::handleKeyReleased);
 
         gameView.makeScene(gameScene, snek, coin);
-        gamePane.getChildren().addAll(gameView.gridCanvas, gameView.gameOverLabel, gameView.gameWonLabel, gameView.scoreLabel);
+        gamePane.getChildren().addAll(gameView.gridCanvas, gameView.gameOverLabel, gameView.gameWonLabel,
+                gameView.scoreLabel, gameView.restartButton, gameView.pauseOverlay,
+                gameView.resumeCountdownOverlay, gameView.gameOverOverlay);
         gamePane.setPadding(new Insets(20));
         gamePane.setAlignment(gameView.gameOverLabel, Pos.TOP_CENTER);
         gamePane.setAlignment(gameView.gameWonLabel, Pos.TOP_CENTER);
         gamePane.setAlignment(gameView.scoreLabel, Pos.BOTTOM_CENTER);
+        gamePane.setAlignment(gameView.restartButton, Pos.CENTER);
+        gameView.restartButton.setOnAction(event -> controller.restart());
+        gameView.resumeButton.setOnAction(event -> controller.resumeGame());
+        gameView.pauseRestartButton.setOnAction(event -> controller.restart());
+        gameView.exitToMenuButton.setOnAction(event -> controller.exitToMenu());
+        gameView.gameOverRestartButton.setOnAction(event -> controller.restart());
+        gameView.gameOverExitButton.setOnAction(event -> controller.exitToMenu());
     }
 
     public ViewManager getViewManager() {

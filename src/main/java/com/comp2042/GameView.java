@@ -4,9 +4,13 @@ import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Screen;
@@ -22,6 +26,17 @@ public class GameView {
     public Label gameOverLabel;
     public Label gameWonLabel;
     public Label scoreLabel;
+    public Button restartButton;
+    public StackPane gameOverOverlay;
+    public Label finalScoreLabel;
+    public Button gameOverRestartButton;
+    public Button gameOverExitButton;
+    public StackPane pauseOverlay;
+    public Button resumeButton;
+    public Button pauseRestartButton;
+    public Button exitToMenuButton;
+    public StackPane resumeCountdownOverlay;
+    public Label resumeCountdownLabel;
     private boolean gameOverVis = false;
     private boolean gameWonVis = false;
 
@@ -39,6 +54,15 @@ public class GameView {
 
     public void resetTurnArray() {
         turnArray = new int[game.getWidth()][game.getHeight()];
+    }
+
+    public void setPaused(boolean paused) {
+        pauseOverlay.setVisible(paused);
+    }
+
+    public void showResumeCountdown(String number) {
+        resumeCountdownLabel.setText(number);
+        resumeCountdownOverlay.setVisible(!number.isEmpty());
     }
 
     public void makeScene(Scene scene, Snake snek, Coin coin) {
@@ -65,6 +89,73 @@ public class GameView {
         scoreLabel.getStylesheets().add(css);
         scoreLabel.setFont(new Font("Arial", 20));
         scoreLabel.setVisible(true);
+
+        restartButton = new Button("Restart");
+        restartButton.setId("restartButton");
+        restartButton.getStylesheets().add(css);
+        restartButton.setFont(new Font("Arial", 18));
+        restartButton.setPrefSize(140, 48);
+        restartButton.setFocusTraversable(false);
+        restartButton.setVisible(false);
+
+        pauseOverlay = new StackPane();
+        pauseOverlay.setId("pauseOverlay");
+        pauseOverlay.setVisible(false);
+        pauseOverlay.getStylesheets().add(css);
+
+        Label pauseTitle = new Label("PAUSED");
+        pauseTitle.setId("pauseTitle");
+
+        resumeButton = createPauseButton("Resume");
+        pauseRestartButton = createPauseButton("Restart Game");
+        exitToMenuButton = createPauseButton("Exit to Menu");
+
+        VBox pausePanel = new VBox(14, pauseTitle, resumeButton, pauseRestartButton, exitToMenuButton);
+        pausePanel.setId("pausePanel");
+        pausePanel.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        pausePanel.setAlignment(javafx.geometry.Pos.CENTER);
+        pauseOverlay.getChildren().add(pausePanel);
+        pauseOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        resumeCountdownLabel = new Label();
+        resumeCountdownLabel.setId("resumeCountdownLabel");
+        resumeCountdownOverlay = new StackPane(resumeCountdownLabel);
+        resumeCountdownOverlay.getStylesheets().add(css);
+        resumeCountdownOverlay.getStyleClass().add("resume-countdown-overlay");
+        resumeCountdownOverlay.setVisible(false);
+
+        gameOverOverlay = new StackPane();
+        gameOverOverlay.setId("gameOverOverlay");
+        gameOverOverlay.getStylesheets().add(css);
+        gameOverOverlay.setVisible(false);
+
+        Label gameOverTitle = new Label("GAME OVER");
+        gameOverTitle.setId("gameOverTitle");
+
+        finalScoreLabel = new Label(finalScoreText(game.getScorePoints()));
+        finalScoreLabel.setId("finalScoreLabel");
+
+        gameOverRestartButton = createOverlayButton("Restart", "game-over-menu-button");
+        gameOverExitButton = createOverlayButton("Main Menu", "game-over-menu-button");
+
+        VBox gameOverPanel = new VBox(16, gameOverTitle, finalScoreLabel,
+                gameOverRestartButton, gameOverExitButton);
+        gameOverPanel.setId("gameOverPanel");
+        gameOverPanel.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        gameOverPanel.setAlignment(javafx.geometry.Pos.CENTER);
+        gameOverOverlay.getChildren().add(gameOverPanel);
+        gameOverOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+    }
+
+    private Button createPauseButton(String text) {
+        return createOverlayButton(text, "pause-menu-button");
+    }
+
+    private Button createOverlayButton(String text, String styleClass) {
+        Button button = new Button(text);
+        button.getStyleClass().add(styleClass);
+        button.setPrefSize(220, 48);
+        return button;
     }
 
     public void scaleToFullscreen(boolean fullScreen, Stage primaryStage, Obstacle obstacle, Snake snek, Coin coin) {
@@ -91,6 +182,8 @@ public class GameView {
 
         gameOverLabel.setFont(new Font("Arial", 25 * fullScale));
         gameWonLabel.setFont(new Font("Arial", 25 * fullScale));
+        restartButton.setFont(new Font("Arial", 18 * fullScale));
+        restartButton.setPrefSize(140 * fullScale, 48 * fullScale);
         drawGrid(coin, snek, obstacle, gc, false, 0);
     }
 
@@ -193,11 +286,15 @@ public class GameView {
     public void gameOver(Snake snek) {
         if (snek.getDead() && !gameOverVis) {
             gameOverVis = true;
-            gameOverLabel.setVisible(true);
         } else if (!snek.getDead() && gameOverVis) {
-            gameOverLabel.setVisible(false);
             gameOverVis = false;
         }
+        gameOverLabel.setVisible(false);
+        gameOverOverlay.setVisible(shouldShowGameOverOverlay(snek.getDead()));
+        if (snek.getDead()) {
+            finalScoreLabel.setText(finalScoreText(game.getScorePoints()));
+        }
+        restartButton.setVisible(shouldShowRestartButton(game.gameWon()));
     }
 
     public void gameWon() {
@@ -208,6 +305,19 @@ public class GameView {
             gameWonVis = false;
             gameWonLabel.setVisible(false);
         }
+        restartButton.setVisible(shouldShowRestartButton(game.gameWon()));
+    }
+
+    static boolean shouldShowGameOverOverlay(boolean gameOver) {
+        return gameOver;
+    }
+
+    static String finalScoreText(int score) {
+        return "Final Score: " + score;
+    }
+
+    static boolean shouldShowRestartButton(boolean gameWon) {
+        return gameWon;
     }
 
     public void updateScoreLabel() {
