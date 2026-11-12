@@ -7,7 +7,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
-import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -17,6 +17,7 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import java.awt.*;
+import java.util.List;
 
 public class GameView {
 
@@ -26,6 +27,7 @@ public class GameView {
     public Label gameOverLabel;
     public Label gameWonLabel;
     public Label scoreLabel;
+    public Label timeLabel;
     public Button restartButton;
     public StackPane gameOverOverlay;
     public Label finalScoreLabel;
@@ -37,6 +39,10 @@ public class GameView {
     public Button exitToMenuButton;
     public StackPane resumeCountdownOverlay;
     public Label resumeCountdownLabel;
+    public StackPane shopOverlay;
+    public Button shopRefreshButton;
+    public Button shopContinueButton;
+    public Label shopPointsLabel;
     private boolean gameOverVis = false;
     private boolean gameWonVis = false;
 
@@ -45,15 +51,8 @@ public class GameView {
     private double initY;
     private double fullScale = 1;
     private boolean fullsize = false;
-    private int[][] turnArray;
-
     public GameView(Game game) {
         this.game = game;
-        this.turnArray = new int[game.getWidth()][game.getHeight()];
-    }
-
-    public void resetTurnArray() {
-        turnArray = new int[game.getWidth()][game.getHeight()];
     }
 
     public void setPaused(boolean paused) {
@@ -65,13 +64,22 @@ public class GameView {
         resumeCountdownOverlay.setVisible(!number.isEmpty());
     }
 
-    public void makeScene(Scene scene, Snake snek, Coin coin) {
+    public void showShop(int points) {
+        shopPointsLabel.setText("POINTS: " + points);
+        shopOverlay.setVisible(true);
+    }
+
+    public void setShopVisible(boolean visible) {
+        shopOverlay.setVisible(visible);
+    }
+
+    public void makeScene(Scene scene, Snake snek, List<Coin> coins) {
         Scene gameScene = scene;
         gridCanvas = new Canvas(gameScene.getWidth(), gameScene.getHeight());
         initX = scene.getWidth();
         initY = scene.getHeight();
         gc = gridCanvas.getGraphicsContext2D();
-        drawGrid(coin, snek, gc);
+        drawGrid(coins, snek, gc);
 
         gameOverLabel = new Label("GAME OVER");
         gameOverLabel.setId("gameOverLabel");
@@ -89,6 +97,11 @@ public class GameView {
         scoreLabel.getStylesheets().add(css);
         scoreLabel.setFont(new Font("Arial", 20));
         scoreLabel.setVisible(true);
+
+        timeLabel = new Label(timeText(ShopCountdown.DURATION_SECONDS));
+        timeLabel.setId("timeLabel");
+        timeLabel.getStylesheets().add(css);
+        timeLabel.setVisible(true);
 
         restartButton = new Button("Restart");
         restartButton.setId("restartButton");
@@ -145,6 +158,65 @@ public class GameView {
         gameOverPanel.setAlignment(javafx.geometry.Pos.CENTER);
         gameOverOverlay.getChildren().add(gameOverPanel);
         gameOverOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        shopOverlay = new StackPane();
+        shopOverlay.setId("shopOverlay");
+        shopOverlay.getStylesheets().add(css);
+        shopOverlay.setVisible(false);
+
+        Label shopTitle = new Label("SNAKE SHOP");
+        shopTitle.setId("shopTitle");
+        Label shopSubtitle = new Label("Spend your points on items");
+        shopSubtitle.setId("shopSubtitle");
+
+        shopRefreshButton = new Button("REFRESH");
+        shopRefreshButton.getStyleClass().add("shop-refresh-button");
+        shopRefreshButton.setPrefSize(108, 42);
+        shopRefreshButton.setFocusTraversable(false);
+        shopRefreshButton.setDisable(true);
+
+        shopPointsLabel = new Label("POINTS: " + game.getScorePoints());
+        shopPointsLabel.setId("shopPointsLabel");
+        HBox shopStatusRow = new HBox(12, shopRefreshButton, shopPointsLabel);
+        shopStatusRow.setId("shopStatusRow");
+        shopStatusRow.setAlignment(javafx.geometry.Pos.CENTER);
+
+        HBox shopItems = new HBox(8, createShopItemCard(1), createShopItemCard(2), createShopItemCard(3));
+        shopItems.setId("shopItems");
+        shopItems.setAlignment(javafx.geometry.Pos.CENTER);
+
+        shopContinueButton = createOverlayButton("Continue Game", "shop-continue-button");
+        shopContinueButton.setPrefSize(316, 48);
+
+        VBox shopPanel = new VBox(12, shopTitle, shopSubtitle, shopStatusRow,
+                shopItems, shopContinueButton);
+        shopPanel.setId("shopPanel");
+        shopPanel.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        shopPanel.setAlignment(javafx.geometry.Pos.CENTER);
+        shopOverlay.getChildren().add(shopPanel);
+        shopOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+    }
+
+    private VBox createShopItemCard(int itemNumber) {
+        Label itemTitle = new Label("ITEM " + itemNumber);
+        itemTitle.getStyleClass().add("shop-item-title");
+        Label itemEffect = new Label("Effect: TBD");
+        itemEffect.getStyleClass().add("shop-item-detail");
+        Label itemPrice = new Label("Price: --");
+        itemPrice.getStyleClass().add("shop-item-detail");
+
+        Button buyButton = new Button("BUY");
+        buyButton.getStyleClass().add("shop-buy-button");
+        buyButton.setPrefSize(88, 38);
+        buyButton.setFocusTraversable(false);
+        buyButton.setDisable(true);
+
+        VBox card = new VBox(8, itemTitle, itemEffect, itemPrice, buyButton);
+        card.getStyleClass().add("shop-item-card");
+        card.setAlignment(javafx.geometry.Pos.CENTER);
+        card.setPrefSize(98, 132);
+        card.setMinSize(98, 132);
+        return card;
     }
 
     private Button createPauseButton(String text) {
@@ -158,7 +230,7 @@ public class GameView {
         return button;
     }
 
-    public void scaleToFullscreen(boolean fullScreen, Stage primaryStage, Obstacle obstacle, Snake snek, Coin coin) {
+    public void scaleToFullscreen(boolean fullScreen, Stage primaryStage, Obstacle obstacle, Snake snek, List<Coin> coins) {
         primaryStage.setFullScreen(fullScreen);
 
         double xScaling = Screen.getPrimary().getVisualBounds().getHeight() / initY;
@@ -184,18 +256,19 @@ public class GameView {
         gameWonLabel.setFont(new Font("Arial", 25 * fullScale));
         restartButton.setFont(new Font("Arial", 18 * fullScale));
         restartButton.setPrefSize(140 * fullScale, 48 * fullScale);
-        drawGrid(coin, snek, obstacle, gc, false, 0);
+        drawGrid(coins, snek, obstacle, gc, false, 0);
     }
 
-    public void drawGrid(Coin coin, Snake snek, Obstacle obstacle, GraphicsContext gc, boolean a, int b) {
+    public void drawGrid(List<Coin> coins, Snake snek, Obstacle obstacle, GraphicsContext gc, boolean a, int b) {
         gc.setFill(game.getColor());
         gc.fillRect(0, 0, gridCanvas.getWidth(), gridCanvas.getHeight());
 
-        gc.drawImage(coin.getImage(), (coin.getPos().x * game.getMultiplier()) * fullScale, (coin.getPos().y * game.getMultiplier()) * fullScale, game.getMultiplier() * fullScale - 3 * fullScale, game.getMultiplier() * fullScale - 3 * fullScale);
+        drawCoins(coins, gc);
 
+        List<Point> body = snek.getBody();
         int bodyIndex = 0;
-        for (Point point : snek.getBody()) {
-            drawBody(snek, point, bodyIndex);
+        for (Point point : body) {
+            drawBody(snek, body, snek.getHead(), point, bodyIndex);
             bodyIndex++;
         }
 
@@ -207,19 +280,30 @@ public class GameView {
         }
     }
 
-    private void drawGrid(Coin coin, Snake snek, GraphicsContext gc) {
+    private void drawGrid(List<Coin> coins, Snake snek, GraphicsContext gc) {
         gc.setFill(game.getColor());
         gc.fillRect(0, 0, gridCanvas.getWidth(), gridCanvas.getHeight());
 
-        gc.drawImage(coin.getImage(), (coin.getPos().x * game.getMultiplier()) * fullScale, (coin.getPos().y * game.getMultiplier()) * fullScale, game.getMultiplier() * fullScale - 3 * fullScale, game.getMultiplier() * fullScale - 3 * fullScale);
+        drawCoins(coins, gc);
 
+        List<Point> body = snek.getBody();
         int bodyIndex = 0;
-        for (Point point : snek.getBody()) {
-            drawBody(snek, point, bodyIndex);
+        for (Point point : body) {
+            drawBody(snek, body, snek.getHead(), point, bodyIndex);
             bodyIndex++;
         }
 
         drawHead(snek);
+    }
+
+    private void drawCoins(List<Coin> coins, GraphicsContext gc) {
+        for (Coin coin : coins) {
+            Point position = coin.getPos();
+            gc.drawImage(coin.getImage(), (position.x * game.getMultiplier()) * fullScale,
+                    (position.y * game.getMultiplier()) * fullScale,
+                    game.getMultiplier() * fullScale - 3 * fullScale,
+                    game.getMultiplier() * fullScale - 3 * fullScale);
+        }
     }
 
     private void drawHead(Snake snek) {
@@ -230,57 +314,41 @@ public class GameView {
         gc.drawImage(rotatedImage, (snek.getHead().x * game.getMultiplier()) * fullScale, (snek.getHead().y * game.getMultiplier()) * fullScale, game.getMultiplier() * fullScale, game.getMultiplier() * fullScale);
     }
 
-    private void drawBody(Snake snek, Point point, int index) {
+    private void drawBody(Snake snek, List<Point> body, Point head, Point point, int index) {
         Image rotatedImage;
-        if (snek.getBody().size() <= 1) {
-            snek.getImageViewTail().setRotate(snek.getSnakeDir());
-            SnapshotParameters params = new SnapshotParameters();
-            params.setFill(Color.TRANSPARENT);
+        SnapshotParameters params = new SnapshotParameters();
+        params.setFill(Color.TRANSPARENT);
+
+        if (index == 0) {
+            Point nextSegment = body.size() > 1 ? body.get(1) : head;
+            int tailDirection = SnakeGeometry.directionBetween(point, nextSegment,
+                    game.getWidth(), game.getHeight());
+            snek.getImageViewTail().setRotate(tailDirection);
             rotatedImage = snek.getImageViewTail().snapshot(params, null);
-        } else if (index == 0) {
-            int rotateTail;
-            if (snek.getBody().get(1).getX() == snek.getBody().get(0).getX() && snek.getBody().get(1).getY() == snek.getBody().get(0).getY() - 1) {
-                rotateTail = 0;
-            } else if (snek.getBody().get(1).getX() == snek.getBody().get(0).getX() && snek.getBody().get(1).getY() == snek.getBody().get(0).getY() + 1) {
-                rotateTail = 180;
-            } else if (snek.getBody().get(1).getX() == snek.getBody().get(0).getX() - 1 && snek.getBody().get(1).getY() == snek.getBody().get(0).getY()) {
-                rotateTail = 270;
-            } else {
-                rotateTail = 90;
-            }
-            snek.getImageViewTail().setRotate(rotateTail);
-            SnapshotParameters params = new SnapshotParameters();
-            params.setFill(Color.TRANSPARENT);
-            rotatedImage = snek.getImageViewTail().snapshot(params, null);
-        } else if (index > 0 && (turnArray[(int) snek.getBody().get(index).getX()][(int) snek.getBody().get(index).getY()] != 0)) {
-            snek.getImageViewTurn().setRotate(90 * turnArray[(int) snek.getBody().get(index).getX()][(int) snek.getBody().get(index).getY()]);
-            SnapshotParameters params = new SnapshotParameters();
-            params.setFill(Color.TRANSPARENT);
-            rotatedImage = snek.getImageViewTurn().snapshot(params, null);
         } else {
-            snek.getImageViewBody().setRotate(snek.getBodyDir(index));
-            SnapshotParameters params = new SnapshotParameters();
-            params.setFill(Color.TRANSPARENT);
-            rotatedImage = snek.getImageViewBody().snapshot(params, null);
+            Point previousSegment = body.get(index - 1);
+            Point nextSegment = index + 1 < body.size() ? body.get(index + 1) : head;
+            int incomingDirection = SnakeGeometry.directionBetween(previousSegment, point,
+                    game.getWidth(), game.getHeight());
+            int outgoingDirection = SnakeGeometry.directionBetween(point, nextSegment,
+                    game.getWidth(), game.getHeight());
+            int turnRotation = SnakeGeometry.turnRotation(incomingDirection, outgoingDirection);
+
+            if (turnRotation >= 0) {
+                // Preserve the existing corner-sprite rotations, now derived from adjacent cells.
+                snek.getImageViewTurn().setRotate(turnRotation);
+                rotatedImage = snek.getImageViewTurn().snapshot(params, null);
+            } else {
+                snek.getImageViewBody().setRotate(incomingDirection == SnakeGeometry.LEFT
+                        || incomingDirection == SnakeGeometry.RIGHT ? 270 : 0);
+                rotatedImage = snek.getImageViewBody().snapshot(params, null);
+            }
         }
 
-        if (turnArray[(int) snek.getBody().get(0).getX()][(int) snek.getBody().get(0).getY()] != 0) {
-            turnArray[(int) snek.getBody().get(0).getX()][(int) snek.getBody().get(0).getY()] = 0;
-        }
-
-        gc.drawImage(rotatedImage, (point.x * game.getMultiplier()) * fullScale, (point.y * game.getMultiplier()) * fullScale, game.getMultiplier() * fullScale * fullScale, game.getMultiplier() * fullScale * fullScale);
-    }
-
-    public void turnDir(Snake snek) {
-        if ((GameController.lastKey == KeyCode.LEFT && GameController.key == KeyCode.UP) || (GameController.lastKey == KeyCode.DOWN && GameController.key == KeyCode.RIGHT)) {
-            turnArray[(int) snek.getHead().getX()][(int) snek.getHead().getY()] = 2;
-        } else if ((GameController.lastKey == KeyCode.LEFT && GameController.key == KeyCode.DOWN) || (GameController.lastKey == KeyCode.UP && GameController.key == KeyCode.RIGHT)) {
-            turnArray[(int) snek.getHead().getX()][(int) snek.getHead().getY()] = 3;
-        } else if ((GameController.lastKey == KeyCode.RIGHT && GameController.key == KeyCode.UP) || (GameController.lastKey == KeyCode.DOWN && GameController.key == KeyCode.LEFT)) {
-            turnArray[(int) snek.getHead().getX()][(int) snek.getHead().getY()] = 1;
-        } else if ((GameController.lastKey == KeyCode.UP && GameController.key == KeyCode.LEFT) || (GameController.lastKey == KeyCode.RIGHT && GameController.key == KeyCode.DOWN)) {
-            turnArray[(int) snek.getHead().getX()][(int) snek.getHead().getY()] = 4;
-        } else turnArray[(int) snek.getHead().getX()][(int) snek.getHead().getY()] = 0;
+        gc.drawImage(rotatedImage, (point.x * game.getMultiplier()) * fullScale,
+                (point.y * game.getMultiplier()) * fullScale,
+                game.getMultiplier() * fullScale * fullScale,
+                game.getMultiplier() * fullScale * fullScale);
     }
 
     public void gameOver(Snake snek) {
@@ -322,6 +390,14 @@ public class GameView {
 
     public void updateScoreLabel() {
         scoreLabel.setText("Score: " + game.getScorePoints());
+    }
+
+    public void updateTimeLabel(int remainingSeconds) {
+        timeLabel.setText(timeText(remainingSeconds));
+    }
+
+    static String timeText(int remainingSeconds) {
+        return "TIME: " + remainingSeconds;
     }
 
 }

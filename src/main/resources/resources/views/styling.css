@@ -65,6 +65,15 @@
     -fx-font-size: 20;
 }
 
+#timeLabel {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 18;
+    -fx-text-fill: #19334f;
+    -fx-background-color: rgba(255, 255, 255, 0.82);
+    -fx-background-radius: 5;
+    -fx-padding: 6 10 6 10;
+}
+
 #restartButton {
     -fx-font-family: "SF Pixelate";
     -fx-font-size: 18;
@@ -191,4 +200,86 @@
     -fx-background-size: 220 48;
     -fx-background-color: transparent;
     -fx-background-insets: 0;
+}
+
+#shopOverlay {
+    -fx-background-color: rgba(0, 0, 0, 0.58);
+}
+
+#shopPanel {
+    -fx-background-color: rgba(255, 255, 255, 0.98);
+    -fx-background-radius: 10;
+    -fx-border-color: #19334f;
+    -fx-border-width: 3;
+    -fx-border-radius: 10;
+    -fx-padding: 18 18 20 18;
+}
+
+#shopTitle {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 27;
+    -fx-text-fill: #19334f;
+}
+
+#shopSubtitle {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 12;
+    -fx-text-fill: #526679;
+}
+
+#shopPointsLabel {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 14;
+    -fx-text-fill: #19334f;
+    -fx-padding: 0 0 0 4;
+}
+
+.shop-refresh-button {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 12;
+    -fx-background-size: 108 42;
+    -fx-pref-width: 108;
+    -fx-pref-height: 42;
+}
+
+.shop-item-card {
+    -fx-background-color: #f2f5f7;
+    -fx-background-radius: 7;
+    -fx-border-color: #a9bac8;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 7;
+    -fx-padding: 8 5 8 5;
+}
+
+.shop-item-title {
+    -fx-font-family: "SF Pixelate Shaded";
+    -fx-font-size: 12;
+    -fx-text-fill: #19334f;
+}
+
+.shop-item-detail {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 9;
+    -fx-text-fill: #526679;
+}
+
+.shop-buy-button {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 11;
+    -fx-background-size: 88 38;
+    -fx-pref-width: 88;
+    -fx-pref-height: 38;
+}
+
+.shop-buy-button:disabled,
+.shop-refresh-button:disabled {
+    -fx-opacity: 0.52;
+}
+
+.shop-continue-button {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 14;
+    -fx-background-size: 316 48;
+    -fx-pref-width: 316;
+    -fx-pref-height: 48;
 }

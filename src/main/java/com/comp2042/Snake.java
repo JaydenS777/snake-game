@@ -15,7 +15,7 @@ public class Snake {
     private final ArrayList<Point> body = new ArrayList<>();
     private final int gx;
     private final int gy;
-    private boolean ignoreBorders = false;
+    private boolean ignoreBorders = true;
     private boolean noBorder;
     private Obstacle obstacle;
     private ImageView imageHead;
@@ -116,10 +116,20 @@ public class Snake {
     }
 
     public boolean ateCoin(Coin coin) {
-        if (!head.equals(coin.getPos())) {
+        Coin eatenCoin = ateAnyCoin(java.util.List.of(coin));
+        return eatenCoin != null;
+    }
+
+    public Coin ateAnyCoin(java.util.List<Coin> coins) {
+        for (Coin coin : coins) {
+            if (head.equals(coin.getPos())) {
+                return coin;
+            }
+        }
+        if (!body.isEmpty()) {
             body.remove(0);
         }
-        return head.equals(coin.getPos());
+        return null;
     }
 
     public boolean hitSelf() {

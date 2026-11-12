@@ -9,6 +9,10 @@ public class GoldCoin extends Coin {
         super(x, y, snek, obstacle);
     }
 
+    GoldCoin(java.awt.Point position) {
+        super(position);
+    }
+
     public Image getImage() {
         return image;
     }

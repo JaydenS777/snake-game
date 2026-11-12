@@ -10,11 +10,19 @@ import static org.junit.jupiter.api.Assertions.*;
 class SnakeTest {
 
     @Test
-    void rainbowPowerUpHasItsOwnReachableRoll() {
-        assertEquals(GameController.PowerUpCoinType.GOLD,
-                GameController.powerUpCoinTypeForRoll(1, true));
-        assertEquals(GameController.PowerUpCoinType.RAINBOW,
-                GameController.powerUpCoinTypeForRoll(2, true));
+    void wallWrappingKeepsTheSnakeAliveAndConnected() {
+        Obstacle obstacle = new Obstacle(20, 20);
+        Snake snake = new Snake(20, 20, false, obstacle);
+
+        for (int i = 0; i < 11; i++) {
+            snake.move('L');
+            snake.ateAnyCoin(java.util.List.of());
+        }
+
+        assertFalse(snake.getDead());
+        assertEquals(new Point(19, 10), snake.getHead());
+        assertEquals(1, snake.getBody().size());
+        assertBodyConnectedOnWrappedBoard(snake, 20, 20);
     }
 
     @Test
@@ -47,7 +55,24 @@ class SnakeTest {
     }
 
     @Test
-    void hittingWallDoesNotLeaveAnExtraBodySegment() {
+    void eatingACoinAddsOneSegmentAndMissingACoinKeepsLengthStable() {
+        Obstacle obstacle = new Obstacle(20, 20);
+        Snake snake = new Snake(20, 20, false, obstacle);
+        int initialLength = snake.getBody().size();
+
+        snake.move('L');
+        Coin coinAtHead = coinAt(snake.getHead().x, snake.getHead().y, snake, obstacle);
+        Coin coinElsewhere = coinAt(0, 0, snake, obstacle);
+        assertEquals(coinAtHead, snake.ateAnyCoin(java.util.List.of(coinElsewhere, coinAtHead)));
+        assertEquals(initialLength + 1, snake.getBody().size());
+
+        snake.move('L');
+        assertFalse(snake.ateCoin(coinAt(0, 0, snake, obstacle)));
+        assertEquals(initialLength + 1, snake.getBody().size());
+    }
+
+    @Test
+    void wallWrapDoesNotAddAnExtraBodySegment() {
         Obstacle obstacle = new Obstacle(20, 20);
         Snake snake = new Snake(20, 20, false, obstacle);
 
@@ -56,14 +81,14 @@ class SnakeTest {
             snake.ateCoin(coinAt(0, 0, snake, obstacle));
         }
 
-        Point positionAtWall = snake.getHead();
-        int lengthAtWall = snake.getBody().size();
+        int lengthBeforeWrap = snake.getBody().size();
         snake.move('L');
+        snake.ateAnyCoin(java.util.List.of());
 
-        assertTrue(snake.getDead());
-        assertEquals(positionAtWall, snake.getHead());
-        assertEquals(lengthAtWall, snake.getBody().size());
-        assertBodyConnected(snake);
+        assertFalse(snake.getDead());
+        assertEquals(new Point(19, 10), snake.getHead());
+        assertEquals(lengthBeforeWrap, snake.getBody().size());
+        assertBodyConnectedOnWrappedBoard(snake, 20, 20);
     }
 
     @Test
@@ -107,6 +132,20 @@ class SnakeTest {
         if (!body.isEmpty()) {
             assertAdjacent(body.get(body.size() - 1), snake.getHead());
         }
+    }
+
+    private static void assertBodyConnectedOnWrappedBoard(Snake snake, int width, int height) {
+        ArrayList<Point> body = snake.getBody();
+        for (int i = 1; i < body.size(); i++) {
+            assertToroidallyAdjacent(body.get(i - 1), body.get(i), width, height);
+        }
+        if (!body.isEmpty()) {
+            assertToroidallyAdjacent(body.get(body.size() - 1), snake.getHead(), width, height);
+        }
+    }
+
+    private static void assertToroidallyAdjacent(Point first, Point second, int width, int height) {
+        assertDoesNotThrow(() -> SnakeGeometry.directionBetween(first, second, width, height));
     }
 
     private static void assertAdjacent(Point first, Point second) {

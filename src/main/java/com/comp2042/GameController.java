@@ -5,32 +5,33 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.io.File;
+import java.awt.Point;
+import java.util.List;
 import java.util.Random;
 
 public class GameController {
-    enum PowerUpCoinType { GOLD, RAINBOW, BLUE, SILVER, NORMAL }
-
     private Snake snek;
-    private Coin coin;
+    private List<Coin> coins;
     private GameView gameView;
     private Game game;
     private Stage stage;
-    private String coinSoundPath = "resources/views/res/coinSound.wav";
     private Obstacle obstacle;
 
-    public static KeyCode key = KeyCode.LEFT;
-    public static KeyCode lastKey = KeyCode.LEFT;
+    private KeyCode key = KeyCode.LEFT;
     private boolean keyPressed = false;
     private boolean pauseKeyDown;
+    private final Random random = new Random();
     private final PauseState pauseState = new PauseState();
     private final ResumeCountdown resumeCountdown = new ResumeCountdown();
+    private final ShopCountdown shopCountdown = new ShopCountdown();
     private final Timeline resumeCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> advanceResumeCountdown()));
+    private final Timeline shopCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> tickShopCountdown()));
+    private Timeline coinSpawnTimeline;
+    private boolean coinSpawnerStarted;
+    private boolean shopOpen;
     private boolean resumeCountdownRunning;
     private boolean resumeAnimationAfterCountdown;
 
@@ -41,30 +42,108 @@ public class GameController {
             resumeCountdownRunning = false;
             if (resumeAnimationAfterCountdown && !gameEnded(game, snek)) {
                 animation.play();
+                if (!shopCountdown.isFinished()) {
+                    shopCountdownTimeline.play();
+                }
+                resumeCoinSpawner();
             }
         }
     }
 
-    private int legacyScoreMultiplier = 2;
+    private void tickShopCountdown() {
+        if (gameEnded(game, snek)) {
+            shopCountdownTimeline.stop();
+            return;
+        }
 
-    private void calculateBonusScore() {
-        int bonus = game.getScorePoints() * legacyScoreMultiplier;
-        System.out.println("Bonus score: " + bonus);
+        int remainingSeconds = shopCountdown.tick();
+        gameView.updateTimeLabel(remainingSeconds);
+        if (shopCountdown.isFinished()) {
+            shopCountdownTimeline.stop();
+            animation.pause();
+            pauseCoinSpawner();
+            shopOpen = true;
+            gameView.showShop(game.getScorePoints());
+        }
     }
 
-    public GameController(Snake snek, Coin coin, Game game, GameView gameView, Obstacle obstacle, Stage stage) {
+    private void startCoinSpawner() {
+        if (coinSpawnerStarted || gameEnded(game, snek)) {
+            return;
+        }
+        coinSpawnerStarted = true;
+        scheduleNextCoinSpawn();
+    }
+
+    private void scheduleNextCoinSpawn() {
+        if (!coinSpawnerStarted || gameEnded(game, snek)) {
+            return;
+        }
+
+        double delaySeconds = CoinSpawnRules.intervalForRoll(random.nextDouble());
+        coinSpawnTimeline = new Timeline(new KeyFrame(Duration.seconds(delaySeconds), event -> {
+            if (!coinSpawnerStarted || gameEnded(game, snek)) {
+                stopCoinSpawner();
+                return;
+            }
+
+            if (CoinSpawnRules.hasRoom(coins.size())) {
+                Coin spawnedCoin = createRandomCoin();
+                if (spawnedCoin != null) {
+                    coins.add(spawnedCoin);
+                    gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
+                }
+            }
+            scheduleNextCoinSpawn();
+        }));
+        coinSpawnTimeline.playFromStart();
+    }
+
+    private Coin createRandomCoin() {
+        Point position = Coin.randomFreePosition(game.getWidth(), game.getHeight(), snek,
+                obstacle, coins, random);
+        if (position == null) {
+            return null;
+        }
+
+        return CoinSpawnRules.typeForRoll(random.nextDouble()) == CoinSpawnRules.Type.GOLD
+                ? new GoldCoin(position)
+                : new Coin(position);
+    }
+
+    private void pauseCoinSpawner() {
+        if (coinSpawnTimeline != null && coinSpawnTimeline.getStatus() == Animation.Status.RUNNING) {
+            coinSpawnTimeline.pause();
+        }
+    }
+
+    private void resumeCoinSpawner() {
+        if (coinSpawnerStarted && coinSpawnTimeline != null) {
+            coinSpawnTimeline.play();
+        }
+    }
+
+    private void stopCoinSpawner() {
+        coinSpawnerStarted = false;
+        if (coinSpawnTimeline != null) {
+            coinSpawnTimeline.stop();
+            coinSpawnTimeline = null;
+        }
+    }
+
+    public GameController(Snake snek, List<Coin> coins, Game game, GameView gameView, Obstacle obstacle, Stage stage) {
         this.snek = snek;
-        this.coin = coin;
+        this.coins = coins;
         this.gameView = gameView;
         this.game = game;
         this.stage = stage;
 
         key = KeyCode.LEFT;
-        lastKey = KeyCode.LEFT;
 
         this.obstacle = obstacle;
         animation.setCycleCount(Animation.INDEFINITE);
         animation.setRate(game.getSpeed());
+        shopCountdownTimeline.setCycleCount(Animation.INDEFINITE);
     }
 
     private final Timeline animation = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
@@ -82,32 +161,45 @@ public class GameController {
                 snek.move('D');
             }
 
-            if (!snek.getDead() && snek.ateCoin(coin)) {
-                powerCoin();
-                game.incScore();
-                if (game.gameWon()) {
-                    gameView.drawGrid(coin, snek, obstacle, gameView.gc, false, 0);
-                    gameView.gameWon();
-                    gameView.updateScoreLabel();
-                    ((Timeline) event.getSource()).stop();
-                    return;
+            if (!snek.getDead()) {
+                Coin eatenCoin = snek.ateAnyCoin(coins);
+                if (eatenCoin != null) {
+                    coins.remove(eatenCoin);
+                    game.addPoints(eatenCoin.getPoints());
+                    game.incScore();
+                    if (game.gameWon()) {
+                        gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
+                        gameView.gameWon();
+                        gameView.updateScoreLabel();
+                        ((Timeline) event.getSource()).stop();
+                        shopCountdownTimeline.stop();
+                        stopCoinSpawner();
+                        return;
+                    }
                 }
-                newCoin();
             }
 
             keyPressed = false;
 
             if (!snek.getDead() || snek.hitSelf()) {
-                gameView.drawGrid(coin, snek, obstacle, gameView.gc, false, 0);
+                gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
             }
 
             gameView.gameWon();
             gameView.gameOver(snek);
             gameView.updateScoreLabel();
+            if (gameEnded(game, snek)) {
+                shopCountdownTimeline.stop();
+                stopCoinSpawner();
+            }
         }
     }));
 
     public void handle(KeyEvent event) {
+        if (shopOpen) {
+            return;
+        }
+
         if (event.getCode().equals(KeyCode.ESCAPE) || event.getCode().equals(KeyCode.P)) {
             if (!pauseKeyDown) {
                 pauseKeyDown = true;
@@ -124,13 +216,17 @@ public class GameController {
             return;
         }
 
-        if (event.getCode().isArrowKey() && !gameEnded(game, snek)) animation.play();
+        if (event.getCode().isArrowKey() && !gameEnded(game, snek)) {
+            animation.play();
+            if (!shopCountdown.isFinished()) {
+                shopCountdownTimeline.play();
+            }
+            startCoinSpawner();
+        }
 
         if (!gameEnded(game, snek) && valKey(event.getCode()) && !keyPressed) {
-            lastKey = key;
             key = event.getCode();
             keyPressed = true;
-            gameView.turnDir(snek);
         }
 
         if (event.getCode().equals(KeyCode.TAB)) {
@@ -139,14 +235,14 @@ public class GameController {
         }
 
         if (event.getCode().equals(KeyCode.PLUS)) {
-            gameView.scaleToFullscreen(true, stage, obstacle, snek, coin);
+            gameView.scaleToFullscreen(true, stage, obstacle, snek, coins);
             gameView.gameOverLabel.setStyle("-fx-font-size: 50;");
             gameView.gameWonLabel.setStyle("-fx-font-size: 50;");
             gameView.scoreLabel.setStyle("-fx-font-size: 35;");
         }
 
         if (event.getCode().equals(KeyCode.MINUS)) {
-            gameView.scaleToFullscreen(false, stage, obstacle, snek, coin);
+            gameView.scaleToFullscreen(false, stage, obstacle, snek, coins);
             gameView.gameOverLabel.setStyle("-fx-font-size: 15;");
             gameView.gameWonLabel.setStyle("-fx-font-size: 15;");
             gameView.scoreLabel.setStyle("-fx-font-size: 15;");
@@ -183,6 +279,8 @@ public class GameController {
         pauseState.pause(animationWasRunning);
         if (animationWasRunning) {
             animation.pause();
+            shopCountdownTimeline.pause();
+            pauseCoinSpawner();
         }
         gameView.setPaused(true);
     }
@@ -202,11 +300,29 @@ public class GameController {
         resumeCountdownTimeline.playFromStart();
     }
 
+    public void continueFromShop() {
+        if (!shopOpen || gameEnded(game, snek)) {
+            return;
+        }
+
+        shopOpen = false;
+        gameView.setShopVisible(false);
+        shopCountdown.reset();
+        gameView.updateTimeLabel(shopCountdown.getRemainingSeconds());
+        animation.play();
+        shopCountdownTimeline.playFromStart();
+        resumeCoinSpawner();
+    }
+
     public void exitToMenu() {
         resumeCountdownTimeline.stop();
         resumeCountdownRunning = false;
         gameView.showResumeCountdown("");
         animation.stop();
+        shopCountdownTimeline.stop();
+        stopCoinSpawner();
+        shopOpen = false;
+        gameView.setShopVisible(false);
         pauseState.reset();
         gameView.setPaused(false);
 
@@ -234,76 +350,39 @@ public class GameController {
         resumeCountdownRunning = false;
         resumeAnimationAfterCountdown = false;
         gameView.showResumeCountdown("");
+        shopOpen = false;
+        gameView.setShopVisible(false);
+        stopCoinSpawner();
+        shopCountdownTimeline.stop();
+        shopCountdown.reset();
+        gameView.updateTimeLabel(shopCountdown.getRemainingSeconds());
         animation.jumpTo(Duration.ZERO);
         animation.stop();
         pauseState.reset();
         gameView.setPaused(false);
 
         snek = new Snake(game.getWidth(), game.getHeight(), game.isNoBorder(), obstacle);
-        coin = new Coin(game.getWidth(), game.getHeight(), snek, obstacle);
-
-        int unusedObstacleCount = new Random().nextInt(game.getWidth() * game.getHeight() / 20) + 3;
+        obstacle.reset();
+        coins.clear();
+        coins.add(new Coin(game.getWidth(), game.getHeight(), snek, obstacle));
 
         animation.setRate(game.getSpeed());
         key = KeyCode.LEFT;
-        lastKey = KeyCode.LEFT;
         keyPressed = false;
         game.resetScore();
-        obstacle.reset();
-        gameView.resetTurnArray();
 
         gameView.gameWon();
         gameView.gameOver(snek);
         gameView.updateScoreLabel();
 
-        gameView.drawGrid(coin, snek, obstacle, gameView.gc, false, 0);
+        gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
     }
 
     public void restart() {
         reset();
         animation.playFromStart();
-    }
-
-    private void powerCoin() {
-        animation.setRate(game.getSpeed());
-        snek.ignoreBorders(false);
-        if (coin.getClass().equals(RainbowCoin.class)) {
-            RainbowCoin tempCoin = (RainbowCoin) coin;
-            animation.setRate(game.getSpeed() + tempCoin.getSpeedBonus());
-        } else if (coin.getClass().equals(SilverCoin.class)){
-            Random rnd = new Random();
-            obstacle.newObstacles(snek, coin, rnd.nextInt(game.getWidth() * game.getHeight()/ 20) +3);
-            game.decMaxScore(obstacle.getObstacles().size());
-        } else if (coin.getClass().equals(BlueCoin.class)) {
-            snek.ignoreBorders(true);
-        }
-        game.addPoints(coin.getPoints());
-    }
-
-    private void newCoin() {
-        if (game.isPowerUp()) {
-            Random rnd = new Random();
-            int ran = rnd.nextInt(12);
-            coin = switch (powerUpCoinTypeForRoll(ran, obstacle.getObstacles().isEmpty())) {
-                case GOLD -> new GoldCoin(game.getWidth(), game.getHeight(), snek, obstacle);
-                case RAINBOW -> new RainbowCoin(game.getWidth(), game.getHeight(), snek, obstacle);
-                case BLUE -> new BlueCoin(game.getWidth(), game.getHeight(), snek, obstacle);
-                case SILVER -> new SilverCoin(game.getWidth(), game.getHeight(), snek, obstacle);
-                case NORMAL -> new Coin(game.getWidth(), game.getHeight(), snek, obstacle);
-            };
-        } else {
-            coin = new Coin(game.getWidth(), game.getHeight(), snek, obstacle);
-        }
-    }
-
-    static PowerUpCoinType powerUpCoinTypeForRoll(int roll, boolean noObstacles) {
-        return switch (roll) {
-            case 1 -> PowerUpCoinType.GOLD;
-            case 2 -> PowerUpCoinType.RAINBOW;
-            case 3 -> PowerUpCoinType.BLUE;
-            case 4 -> noObstacles ? PowerUpCoinType.SILVER : PowerUpCoinType.NORMAL;
-            default -> PowerUpCoinType.NORMAL;
-        };
+        shopCountdownTimeline.playFromStart();
+        startCoinSpawner();
     }
 
     static boolean gameEnded(Game game, Snake snake) {

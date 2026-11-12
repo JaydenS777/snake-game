@@ -6,6 +6,9 @@ import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainMenuController {
 
     private static final int X_VALUE = 20;
@@ -31,10 +34,11 @@ public class MainMenuController {
         Game game = new Game(X_VALUE, Y_VALUE, POWER_UP, DIFFICULTY);
         Obstacle obstacle = new Obstacle(game.getWidth(), game.getHeight());
         Snake snek = new Snake(game.getWidth(), game.getHeight(), game.isNoBorder(), obstacle);
-        Coin coin = new Coin(game.getWidth(), game.getHeight(), snek, obstacle);
+        List<Coin> coins = new ArrayList<>();
+        coins.add(new Coin(game.getWidth(), game.getHeight(), snek, obstacle));
 
         GameView gameView = new GameView(game);
-        GameController controller = new GameController(snek, coin, game, gameView, obstacle, gameStage);
+        GameController controller = new GameController(snek, coins, game, gameView, obstacle, gameStage);
 
         StackPane gamePane = new StackPane();
         gameScene = new Scene(gamePane, game.getWidth() * game.getMultiplier(), game.getHeight() * game.getMultiplier());
@@ -42,13 +46,14 @@ public class MainMenuController {
         gameScene.setOnKeyPressed(controller::handle);
         gameScene.setOnKeyReleased(controller::handleKeyReleased);
 
-        gameView.makeScene(gameScene, snek, coin);
+        gameView.makeScene(gameScene, snek, coins);
         gamePane.getChildren().addAll(gameView.gridCanvas, gameView.gameOverLabel, gameView.gameWonLabel,
-                gameView.scoreLabel, gameView.restartButton, gameView.pauseOverlay,
-                gameView.resumeCountdownOverlay, gameView.gameOverOverlay);
+                gameView.timeLabel, gameView.scoreLabel, gameView.restartButton, gameView.pauseOverlay,
+                gameView.resumeCountdownOverlay, gameView.gameOverOverlay, gameView.shopOverlay);
         gamePane.setPadding(new Insets(20));
         gamePane.setAlignment(gameView.gameOverLabel, Pos.TOP_CENTER);
         gamePane.setAlignment(gameView.gameWonLabel, Pos.TOP_CENTER);
+        gamePane.setAlignment(gameView.timeLabel, Pos.TOP_RIGHT);
         gamePane.setAlignment(gameView.scoreLabel, Pos.BOTTOM_CENTER);
         gamePane.setAlignment(gameView.restartButton, Pos.CENTER);
         gameView.restartButton.setOnAction(event -> controller.restart());
@@ -57,6 +62,7 @@ public class MainMenuController {
         gameView.exitToMenuButton.setOnAction(event -> controller.exitToMenu());
         gameView.gameOverRestartButton.setOnAction(event -> controller.restart());
         gameView.gameOverExitButton.setOnAction(event -> controller.exitToMenu());
+        gameView.shopContinueButton.setOnAction(event -> controller.continueFromShop());
     }
 
     public ViewManager getViewManager() {

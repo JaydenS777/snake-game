@@ -24,4 +24,10 @@ class GameViewTest {
     void finalScoreTextShowsTheScoreAtGameOver() {
         assertEquals("Final Score: 42", GameView.finalScoreText(42));
     }
+
+    @Test
+    void timeLabelShowsTheRemainingCountdown() {
+        assertEquals("TIME: 60", GameView.timeText(60));
+        assertEquals("TIME: 0", GameView.timeText(0));
+    }
 }
