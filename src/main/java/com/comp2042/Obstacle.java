@@ -4,9 +4,12 @@ import javafx.scene.paint.Color;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Random;
 
 public class Obstacle {
+    private static final int MAX_OBSTACLES = 50;
+
     private Color color = Color.BLACK;
     private ArrayList<Point> obstacles = new ArrayList<>();
     private int x;
@@ -18,17 +21,28 @@ public class Obstacle {
     }
 
     public void newObstacles(Snake snek, Coin coin, int amount) {
-        if (obstacles.size() > 50) {
+        int remainingCapacity = MAX_OBSTACLES - obstacles.size();
+        if (amount <= 0 || remainingCapacity <= 0) {
             return;
         }
-        Random rnd = new Random();
-        Point p;
-        for (int i=0; i<amount; i++) {
-            do {
-                p = new Point(rnd.nextInt(x) + 1, rnd.nextInt(y));
-            } while (coin.getPos().equals(p) || snek.getBody().contains(p) || snek.getHead().equals(p));
-            obstacles.add(p);
+
+        ArrayList<Point> availableCells = new ArrayList<>();
+        Point coinPosition = coin.getPos();
+        for (int cellX = 0; cellX < x; cellX++) {
+            for (int cellY = 0; cellY < y; cellY++) {
+                Point candidate = new Point(cellX, cellY);
+                if (!candidate.equals(coinPosition)
+                        && !candidate.equals(snek.getHead())
+                        && !snek.getBody().contains(candidate)
+                        && !obstacles.contains(candidate)) {
+                    availableCells.add(candidate);
+                }
+            }
         }
+
+        Collections.shuffle(availableCells, new Random());
+        int cellsToAdd = Math.min(amount, Math.min(availableCells.size(), remainingCapacity));
+        obstacles.addAll(availableCells.subList(0, cellsToAdd));
     }
 
     public Color getColor() {

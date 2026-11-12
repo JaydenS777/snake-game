@@ -7,7 +7,7 @@ import java.util.Random;
 
 public class Coin {
     private Point pos;
-    private Image image = new Image("resources/views/res/redcoin.png");
+    private Image image;
 
     public Coin(int x, int y, Snake snek, Obstacle obstacle) {
         int tx;
@@ -31,6 +31,9 @@ public class Coin {
     }
 
     public Image getImage() {
+        if (image == null) {
+            image = new Image("resources/views/res/redcoin.png");
+        }
         return image;
     }
 }

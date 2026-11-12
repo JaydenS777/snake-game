@@ -18,15 +18,12 @@ public class Snake {
     private boolean ignoreBorders = false;
     private boolean noBorder;
     private Obstacle obstacle;
-    private Image imgInputHead = new Image("resources/views/res/snakehead.png");
-    private ImageView imageHead = new ImageView(imgInputHead);
-    private Image imgInputBody = new Image("resources/views/res/snakebody.png");
-    private ImageView imageBody = new ImageView(imgInputBody);
-    private Image imgInputTurn = new Image("resources/views/res/snaketurnleft.png");
-    private ImageView imageTurn = new ImageView(imgInputTurn);
-    private Image imgInputTail = new Image("resources/views/res/snaketail.png");
-    private ImageView imageTail = new ImageView(imgInputTail);
+    private ImageView imageHead;
+    private ImageView imageBody;
+    private ImageView imageTurn;
+    private ImageView imageTail;
     private int snakeDir = 270;
+    private char direction = 'L';
 
     public Snake(int x, int y, boolean noBorder, Obstacle obstacle) {
         this.obstacle = obstacle;
@@ -38,56 +35,74 @@ public class Snake {
     }
 
     public void move(char dir) {
-        body.add(new Point(head));
+        if (dead || !canMove(dir)) {
+            return;
+        }
+
+        int nextX = head.x;
+        int nextY = head.y;
         switch (dir) {
             case 'U':
-                snakeDir = 0;
-                head.translate(0, -1);
-                if (borderControl() && (!ignoreBorders && !noBorder) || obstacle.getObstacles().contains(head)) {
-                    head.translate(0, 1);
-                    dead = true;
-                } else if (borderControl() && (ignoreBorders || noBorder)) {
-                    head.setLocation(head.getX(), gy - 1);
-                }
+                nextY--;
                 break;
-
             case 'D':
-                snakeDir = 180;
-                head.translate(0, 1);
-                if (borderControl() && (!ignoreBorders && !noBorder) || obstacle.getObstacles().contains(head)) {
-                    head.translate(0, -1);
-                    dead = true;
-                } else if (borderControl() && (ignoreBorders || noBorder)) {
-                    head.setLocation(head.getX(), 0);
-                }
+                nextY++;
                 break;
-
             case 'L':
-                snakeDir = 270;
-                head.translate(-1, 0);
-                if (borderControl() && (!ignoreBorders && !noBorder) || obstacle.getObstacles().contains(head)) {
-                    head.translate(1, 0);
-                    dead = true;
-                } else if (borderControl() && (ignoreBorders || noBorder)) {
-                    head.setLocation(gx - 1, head.getY());
-                }
+                nextX--;
                 break;
-
             case 'R':
-                snakeDir = 90;
-                head.translate(1, 0);
-                if (borderControl() && (!ignoreBorders && !noBorder) || obstacle.getObstacles().contains(head)) {
-                    head.translate(-1, 0);
-                    dead = true;
-                } else if (borderControl() && (ignoreBorders || noBorder)) {
-                    head.setLocation(0, head.getY());
-                }
+                nextX++;
                 break;
+            default:
+                return;
         }
+
+        if (nextX < 0 || nextY < 0 || nextX >= gx || nextY >= gy) {
+            if (!ignoreBorders && !noBorder) {
+                dead = true;
+                return;
+            }
+
+            if (nextX < 0) nextX = gx - 1;
+            else if (nextX >= gx) nextX = 0;
+            if (nextY < 0) nextY = gy - 1;
+            else if (nextY >= gy) nextY = 0;
+        }
+
+        Point nextHead = new Point(nextX, nextY);
+        if (obstacle.getObstacles().contains(nextHead)) {
+            dead = true;
+            return;
+        }
+
+        body.add(new Point(head));
+        head.setLocation(nextHead);
+        direction = dir;
+        snakeDir = switch (dir) {
+            case 'U' -> 0;
+            case 'R' -> 90;
+            case 'D' -> 180;
+            default -> 270;
+        };
 
         if (body.size() > 4 && hitSelf() && !body.get(0).equals(head)) {
             dead = true;
+            // The tail still advances on the fatal step, so a collision cannot
+            // make the snake appear to gain an extra segment.
+            body.remove(0);
         }
+    }
+
+    boolean canMove(char dir) {
+        if (dir != 'U' && dir != 'D' && dir != 'L' && dir != 'R') {
+            return false;
+        }
+
+        return !((direction == 'U' && dir == 'D')
+                || (direction == 'D' && dir == 'U')
+                || (direction == 'L' && dir == 'R')
+                || (direction == 'R' && dir == 'L'));
     }
 
     public int getBodyDir(int bodyCount) {
@@ -105,10 +120,6 @@ public class Snake {
             body.remove(0);
         }
         return head.equals(coin.getPos());
-    }
-
-    private boolean borderControl() {
-        return head.getX() < 0 || head.getY() < 0 || head.getX() >= gx || head.getY() >= gy;
     }
 
     public boolean hitSelf() {
@@ -140,14 +151,17 @@ public class Snake {
     }
 
     public ImageView getImageViewHead() {
+        loadImages();
         return imageHead;
     }
 
     public ImageView getImageViewBody() {
+        loadImages();
         return imageBody;
     }
 
     public ImageView getImageViewTurn() {
+        loadImages();
         return imageTurn;
     }
 
@@ -156,6 +170,18 @@ public class Snake {
     }
 
     public ImageView getImageViewTail() {
+        loadImages();
         return imageTail;
+    }
+
+    private void loadImages() {
+        if (imageHead != null) {
+            return;
+        }
+
+        imageHead = new ImageView(new Image("resources/views/res/snakehead.png"));
+        imageBody = new ImageView(new Image("resources/views/res/snakebody.png"));
+        imageTurn = new ImageView(new Image("resources/views/res/snaketurnleft.png"));
+        imageTail = new ImageView(new Image("resources/views/res/snaketail.png"));
     }
 }

@@ -14,6 +14,8 @@ import java.io.File;
 import java.util.Random;
 
 public class GameController {
+    enum PowerUpCoinType { GOLD, RAINBOW, BLUE, SILVER, NORMAL }
+
     private Snake snek;
     private Coin coin;
     private GameView gameView;
@@ -40,13 +42,16 @@ public class GameController {
         this.game = game;
         this.stage = stage;
 
+        key = KeyCode.LEFT;
+        lastKey = KeyCode.LEFT;
+
         this.obstacle = obstacle;
         animation.setCycleCount(Animation.INDEFINITE);
         animation.setRate(game.getSpeed());
     }
 
     private final Timeline animation = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
-        if (snek.getDead()) {
+        if (gameEnded(game, snek)) {
             return;
         } else {
 
@@ -65,6 +70,9 @@ public class GameController {
                 game.incScore();
                 if (game.gameWon()) {
                     gameView.drawGrid(coin, snek, obstacle, gameView.gc, false, 0);
+                    gameView.gameWon();
+                    gameView.updateScoreLabel();
+                    ((Timeline) event.getSource()).stop();
                     return;
                 }
                 newCoin();
@@ -83,9 +91,9 @@ public class GameController {
     }));
 
     public void handle(KeyEvent event) {
-        if (event.getCode().isArrowKey()) animation.play();
+        if (event.getCode().isArrowKey() && !gameEnded(game, snek)) animation.play();
 
-        if (valKey(event.getCode()) && !keyPressed) {
+        if (!gameEnded(game, snek) && valKey(event.getCode()) && !keyPressed) {
             lastKey = key;
             key = event.getCode();
             keyPressed = true;
@@ -122,15 +130,17 @@ public class GameController {
         }
     }
 
-    private boolean valKey(KeyCode key) {
-        if (!key.isArrowKey()) return false;
-        else {
-            if (key.equals(KeyCode.LEFT)) if (!this.key.equals(KeyCode.RIGHT)) return true;
-            if (key.equals(KeyCode.RIGHT)) if (!this.key.equals(KeyCode.LEFT)) return true;
-            if (key.equals(KeyCode.DOWN)) if (!this.key.equals(KeyCode.DOWN)) return true;
-            if (key.equals(KeyCode.UP)) return !this.key.equals(KeyCode.DOWN);
-            return false;
-        }
+    private boolean valKey(KeyCode requestedKey) {
+        if (!requestedKey.isArrowKey()) return false;
+
+        char requestedDirection = switch (requestedKey) {
+            case UP -> 'U';
+            case DOWN -> 'D';
+            case LEFT -> 'L';
+            case RIGHT -> 'R';
+            default -> '\0';
+        };
+        return snek.canMove(requestedDirection);
     }
 
     private void reset() {
@@ -145,9 +155,11 @@ public class GameController {
 
         animation.setRate(game.getSpeed());
         key = KeyCode.LEFT;
+        lastKey = KeyCode.LEFT;
         keyPressed = false;
         game.resetScore();
         obstacle.reset();
+        gameView.resetTurnArray();
 
         gameView.gameWon();
         gameView.gameOver(snek);
@@ -176,19 +188,29 @@ public class GameController {
         if (game.isPowerUp()) {
             Random rnd = new Random();
             int ran = rnd.nextInt(12);
-            if (ran == 1) {
-                coin = new GoldCoin(game.getWidth(), game.getHeight(), snek, obstacle);
-            } else if (ran == 1) {
-                coin = new RainbowCoin(game.getWidth(), game.getHeight(), snek, obstacle);
-            } else if (ran == 3) {
-                coin = new BlueCoin(game.getWidth(), game.getHeight(), snek, obstacle);
-            } else if (ran == 4 && obstacle.getObstacles().size() == 0) {
-                coin = new SilverCoin(game.getWidth(), game.getHeight(), snek, obstacle);
-            } else {
-                coin = new Coin(game.getWidth(), game.getHeight(), snek, obstacle);
-            }
+            coin = switch (powerUpCoinTypeForRoll(ran, obstacle.getObstacles().isEmpty())) {
+                case GOLD -> new GoldCoin(game.getWidth(), game.getHeight(), snek, obstacle);
+                case RAINBOW -> new RainbowCoin(game.getWidth(), game.getHeight(), snek, obstacle);
+                case BLUE -> new BlueCoin(game.getWidth(), game.getHeight(), snek, obstacle);
+                case SILVER -> new SilverCoin(game.getWidth(), game.getHeight(), snek, obstacle);
+                case NORMAL -> new Coin(game.getWidth(), game.getHeight(), snek, obstacle);
+            };
         } else {
             coin = new Coin(game.getWidth(), game.getHeight(), snek, obstacle);
         }
+    }
+
+    static PowerUpCoinType powerUpCoinTypeForRoll(int roll, boolean noObstacles) {
+        return switch (roll) {
+            case 1 -> PowerUpCoinType.GOLD;
+            case 2 -> PowerUpCoinType.RAINBOW;
+            case 3 -> PowerUpCoinType.BLUE;
+            case 4 -> noObstacles ? PowerUpCoinType.SILVER : PowerUpCoinType.NORMAL;
+            default -> PowerUpCoinType.NORMAL;
+        };
+    }
+
+    static boolean gameEnded(Game game, Snake snake) {
+        return game.gameWon() || snake.getDead();
     }
 }
