@@ -2,7 +2,10 @@ package com.comp2042;
 
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
@@ -13,6 +16,7 @@ import java.util.List;
 import java.util.Random;
 
 public class GameController {
+    private static final double INVINCIBILITY_SECONDS = 3;
     private Snake snek;
     private List<Coin> coins;
     private GameView gameView;
@@ -29,7 +33,7 @@ public class GameController {
     private final ShopCountdown shopCountdown = new ShopCountdown();
     private final ShopRefreshRules shopRefreshRules = new ShopRefreshRules();
     private final SkillInventory skillInventory = new SkillInventory();
-    private List<ShopSkill> shopOffers = ShopOfferRules.initialOffers();
+    private List<ShopSkill> shopOffers = ShopOfferRules.initialOffers(false);
     private final Timeline resumeCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> advanceResumeCountdown()));
     private final Timeline shopCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> tickShopCountdown()));
     private Timeline coinSpawnTimeline;
@@ -38,6 +42,11 @@ public class GameController {
     private boolean resumeCountdownRunning;
     private boolean resumeAnimationAfterCountdown;
     private boolean resumeFromShopCountdown;
+    private boolean reviving;
+    private final DoubleProperty invincibilityElapsed = new SimpleDoubleProperty();
+    private final Timeline invincibilityTimeline = new Timeline(
+            new KeyFrame(Duration.ZERO, new KeyValue(invincibilityElapsed, 0)),
+            new KeyFrame(Duration.seconds(INVINCIBILITY_SECONDS), new KeyValue(invincibilityElapsed, INVINCIBILITY_SECONDS)));
 
     private void advanceResumeCountdown() {
         String number = resumeCountdown.advance();
@@ -54,6 +63,7 @@ public class GameController {
                 animation.play();
                 shopCountdownTimeline.playFromStart();
                 resumeCoinSpawner();
+                resumeInvincibility();
             } else if (resumeAnimationAfterCountdown && !gameEnded(game, snek)) {
                 animation.play();
                 if (!shopCountdown.isFinished()) {
@@ -61,6 +71,7 @@ public class GameController {
                     gameView.resumeTimeProgress();
                 }
                 resumeCoinSpawner();
+                resumeInvincibility();
             }
         }
     }
@@ -78,10 +89,11 @@ public class GameController {
             shopCountdownTimeline.stop();
             animation.pause();
             pauseCoinSpawner();
+            invincibilityTimeline.pause();
             shopOpen = true;
             shopRefreshRules.reset();
             skillInventory.startShopVisit();
-            shopOffers = ShopOfferRules.initialOffers();
+            shopOffers = ShopOfferRules.initialOffers(skillInventory.isBlueCoinUnlocked());
             gameView.showShop(game.getScorePoints(), shopRefreshRules.refreshesUsed(),
                     shopOffers, skillInventory.counts(), snek.getBody().size(), skillInventory.purchasesThisVisit());
         }
@@ -126,9 +138,11 @@ public class GameController {
             return null;
         }
 
-        return CoinSpawnRules.typeForRoll(random.nextDouble()) == CoinSpawnRules.Type.GOLD
-                ? new GoldCoin(position)
-                : new Coin(position);
+        return switch (CoinSpawnRules.typeForRoll(random.nextDouble(), skillInventory.isBlueCoinUnlocked())) {
+            case RED -> new Coin(position);
+            case GOLD -> new GoldCoin(position);
+            case BLUE -> new BlueCoin(position);
+        };
     }
 
     private void pauseCoinSpawner() {
@@ -164,62 +178,127 @@ public class GameController {
         animation.setCycleCount(Animation.INDEFINITE);
         animation.setRate(game.getSpeed());
         shopCountdownTimeline.setCycleCount(Animation.INDEFINITE);
+        invincibilityElapsed.addListener((observable, previous, elapsed) ->
+                gameView.setSnakeOpacity(invincibilityOpacity(elapsed.doubleValue())));
+        invincibilityTimeline.setOnFinished(event -> endInvincibility());
+    }
+
+    void initializeOwnedSkills() {
+        gameView.updateOwnedSkills(skillInventory.counts());
+    }
+
+    static double invincibilityOpacity(double elapsed) {
+        if (elapsed >= INVINCIBILITY_SECONDS) {
+            return 1;
+        }
+        double wave = (1 - Math.cos(2 * Math.PI * 5 * elapsed / INVINCIBILITY_SECONDS)) / 2;
+        double settle = 1 - Math.clamp((INVINCIBILITY_SECONDS - elapsed) / 0.17, 0, 1);
+        return 0.26 + 0.74 * Math.max(wave, settle);
+    }
+
+    private void resumeInvincibility() {
+        if (invincibilityTimeline.getStatus() == Animation.Status.PAUSED) {
+            invincibilityTimeline.play();
+        }
+    }
+
+    private void endInvincibility() {
+        gameView.setSnakeOpacity(1);
+        snek.exitInvincibility();
+        if (snek.getDead()) {
+            handleDeath();
+        }
+    }
+
+    private void handleDeath() {
+        animation.pause();
+        shopCountdownTimeline.pause();
+        gameView.pauseTimeProgress();
+        pauseCoinSpawner();
+        gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
+        gameView.gameOver(snek);
+        gameView.updateScoreLabel();
+        if (!skillInventory.consumeRevive()) {
+            animation.stop();
+            shopCountdownTimeline.stop();
+            gameView.stopTimeProgress();
+            stopCoinSpawner();
+            return;
+        }
+
+        reviving = true;
+        gameView.playReviveAnimation(this::finishRevival);
+    }
+
+    private void finishRevival() {
+        key = switch (snek.reviveFromTailHalf()) {
+            case 'U' -> KeyCode.UP;
+            case 'D' -> KeyCode.DOWN;
+            case 'R' -> KeyCode.RIGHT;
+            default -> KeyCode.LEFT;
+        };
+        keyPressed = false;
+        snek.enterInvincibility();
+        gameView.setSnakeOpacity(invincibilityOpacity(0));
+        initializeOwnedSkills();
+        gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
+        gameView.gameOver(snek);
+        reviving = false;
+        invincibilityTimeline.playFromStart();
+        animation.playFromStart();
+        shopCountdownTimeline.play();
+        gameView.resumeTimeProgress();
+        resumeCoinSpawner();
+    }
+
+    private void clearRevival() {
+        gameView.stopReviveAnimation();
+        invincibilityTimeline.stop();
+        reviving = false;
+        gameView.setSnakeOpacity(1);
     }
 
     private final Timeline animation = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
         if (gameEnded(game, snek)) {
             gameView.stopTimeProgress();
             return;
-        } else {
+        }
+        snek.move(switch (key) {
+            case RIGHT -> 'R';
+            case UP -> 'U';
+            case DOWN -> 'D';
+            default -> 'L';
+        });
+        if (snek.getDead()) {
+            handleDeath();
+            return;
+        }
 
-            if (key.equals(KeyCode.LEFT)) {
-                snek.move('L');
-            } else if (key.equals(KeyCode.RIGHT)) {
-                snek.move('R');
-            } else if (key.equals(KeyCode.UP)) {
-                snek.move('U');
-            } else if (key.equals(KeyCode.DOWN)) {
-                snek.move('D');
+        Coin eatenCoin = snek.ateAnyCoin(coins);
+        if (eatenCoin != null) {
+            coins.remove(eatenCoin);
+            game.addPoints(eatenCoin.getPoints() + skillInventory.bonusPointsFor(eatenCoin));
+            if (eatenCoin.growsSnake()) {
+                game.incScore();
             }
-
-            if (!snek.getDead()) {
-                Coin eatenCoin = snek.ateAnyCoin(coins);
-                if (eatenCoin != null) {
-                    coins.remove(eatenCoin);
-                    game.addPoints(eatenCoin.getPoints() + skillInventory.bonusPointsFor(eatenCoin));
-                    game.incScore();
-                    if (game.gameWon()) {
-                        gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
-                        gameView.gameWon();
-                        gameView.updateScoreLabel();
-                        ((Timeline) event.getSource()).stop();
-                        shopCountdownTimeline.stop();
-                        gameView.stopTimeProgress();
-                        stopCoinSpawner();
-                        return;
-                    }
-                }
-            }
-
-            keyPressed = false;
-
-            if (!snek.getDead() || snek.hitSelf()) {
-                gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
-            }
-
-            gameView.gameWon();
-            gameView.gameOver(snek);
-            gameView.updateScoreLabel();
-            if (gameEnded(game, snek)) {
-                shopCountdownTimeline.stop();
-                gameView.stopTimeProgress();
-                stopCoinSpawner();
-            }
+        }
+        keyPressed = false;
+        gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
+        gameView.gameWon();
+        gameView.gameOver(snek);
+        gameView.updateScoreLabel();
+        if (game.gameWon()) {
+            ((Timeline) event.getSource()).stop();
+            shopCountdownTimeline.stop();
+            gameView.stopTimeProgress();
+            stopCoinSpawner();
+            invincibilityTimeline.stop();
+            gameView.setSnakeOpacity(1);
         }
     }));
 
     public void handle(KeyEvent event) {
-        if (shopOpen) {
+        if (shopOpen || reviving) {
             return;
         }
 
@@ -253,11 +332,6 @@ public class GameController {
         if (!gameEnded(game, snek) && valKey(event.getCode()) && !keyPressed) {
             key = event.getCode();
             keyPressed = true;
-        }
-
-        if (event.getCode().equals(KeyCode.TAB)) {
-            reset();
-            gameView.updateScoreLabel();
         }
 
         if (event.getCode().equals(KeyCode.PLUS)) {
@@ -304,6 +378,7 @@ public class GameController {
             shopCountdownTimeline.pause();
             gameView.pauseTimeProgress();
             pauseCoinSpawner();
+            invincibilityTimeline.pause();
         }
         gameView.setPaused(true);
     }
@@ -345,16 +420,20 @@ public class GameController {
         }
         if (game.spendPoints(ShopRefreshRules.COST)) {
             shopRefreshRules.recordRefresh(game.getScorePoints() + ShopRefreshRules.COST);
-            shopOffers = ShopOfferRules.reroll(random);
+            shopOffers = ShopOfferRules.reroll(random, skillInventory.isBlueCoinUnlocked());
             gameView.updateScoreLabel();
             updateShopView();
         }
     }
 
     public void purchaseShopSkill(ShopSkill skill) {
-        if (!shopOpen || resumeFromShopCountdown || !skillInventory.purchase(skill, game, snek)) {
+        if (!shopOpen || resumeFromShopCountdown || !shopOffers.contains(skill)
+                || !skillInventory.purchase(skill, game, snek)) {
             updateShopView();
             return;
+        }
+        if (skill == ShopSkill.BLUE_COIN) {
+            shopOffers = shopOffers.stream().filter(offer -> offer != ShopSkill.BLUE_COIN).toList();
         }
         gameView.updateScoreLabel();
         gameView.updateOwnedSkills(skillInventory.counts());
@@ -368,6 +447,10 @@ public class GameController {
     }
 
     public void exitToMenu() {
+        if (reviving) {
+            return;
+        }
+        clearRevival();
         resumeCountdownTimeline.stop();
         resumeCountdownRunning = false;
         resumeFromShopCountdown = false;
@@ -398,7 +481,7 @@ public class GameController {
     }
 
     private void reset() {
-
+        clearRevival();
         resumeCountdownTimeline.stop();
         resumeCountdownRunning = false;
         resumeAnimationAfterCountdown = false;
@@ -426,7 +509,7 @@ public class GameController {
         keyPressed = false;
         game.resetScore();
         skillInventory.reset();
-        shopOffers = ShopOfferRules.initialOffers();
+        shopOffers = ShopOfferRules.initialOffers(false);
         gameView.updateOwnedSkills(skillInventory.counts());
 
         gameView.gameWon();
@@ -437,6 +520,9 @@ public class GameController {
     }
 
     public void restart() {
+        if (reviving) {
+            return;
+        }
         reset();
         animation.playFromStart();
         gameView.startTimeProgress();

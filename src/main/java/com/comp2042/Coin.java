@@ -1,6 +1,7 @@
 package com.comp2042;
 
 import javafx.scene.image.Image;
+import javafx.scene.canvas.GraphicsContext;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -60,6 +61,14 @@ public class Coin {
     public int getPoints() {
         int points = 5;
         return points;
+    }
+
+    boolean growsSnake() {
+        return true;
+    }
+
+    void draw(GraphicsContext graphics, double x, double y, double size) {
+        graphics.drawImage(getImage(), x, y, size, size);
     }
 
     public Image getImage() {

@@ -10,6 +10,19 @@ final class SkillInventory {
     private final EnumMap<ShopSkill, Integer> counts = new EnumMap<>(ShopSkill.class);
     private int purchasesThisVisit;
 
+    SkillInventory() {
+        reset();
+    }
+
+    boolean consumeRevive() {
+        int remaining = count(ShopSkill.REVIVE);
+        if (remaining == 0) {
+            return false;
+        }
+        counts.put(ShopSkill.REVIVE, remaining - 1);
+        return true;
+    }
+
     void startShopVisit() {
         purchasesThisVisit = 0;
     }
@@ -18,8 +31,13 @@ final class SkillInventory {
         return purchasesThisVisit;
     }
 
+    boolean isBlueCoinUnlocked() {
+        return count(ShopSkill.BLUE_COIN) > 0;
+    }
+
     boolean canPurchase(ShopSkill skill, int balance, Snake snake) {
         return purchasesThisVisit < MAX_PURCHASES_PER_VISIT && balance >= skill.cost()
+                && (skill != ShopSkill.BLUE_COIN || !isBlueCoinUnlocked())
                 && (skill != ShopSkill.LENGTH_DECREASE || snake.getBody().size() >= 5);
     }
 
@@ -58,6 +76,7 @@ final class SkillInventory {
 
     void reset() {
         counts.clear();
+        counts.put(ShopSkill.REVIVE, 1);
         startShopVisit();
     }
 }

@@ -6,7 +6,10 @@ final class CoinSpawnRules {
     static final double MAX_INTERVAL_SECONDS = 2.0;
     static final double GOLD_PROBABILITY = 0.20;
 
-    enum Type { RED, GOLD }
+    private static final double BLUE_PROBABILITY = 0.41;
+    private static final double GOLD_PROBABILITY_WITH_BLUE = 0.13;
+
+    enum Type { RED, GOLD, BLUE }
 
     private CoinSpawnRules() {
     }
@@ -19,6 +22,18 @@ final class CoinSpawnRules {
     static Type typeForRoll(double roll) {
         validateRoll(roll);
         return roll < GOLD_PROBABILITY ? Type.GOLD : Type.RED;
+    }
+
+    static Type typeForRoll(double roll, boolean blueUnlocked) {
+        if (!blueUnlocked) {
+            return typeForRoll(roll);
+        }
+        validateRoll(roll);
+        if (roll < BLUE_PROBABILITY) {
+            return Type.BLUE;
+        }
+        double goldThreshold = BLUE_PROBABILITY + GOLD_PROBABILITY_WITH_BLUE;
+        return roll < goldThreshold ? Type.GOLD : Type.RED;
     }
 
     static boolean hasRoom(int activeCoins) {

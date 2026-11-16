@@ -29,6 +29,18 @@ class CoinSpawnRulesTest {
     }
 
     @Test
+    void blueSpawnsAlmostAsOftenAsRedAfterUnlock() {
+        int samples = 100;
+        assertEquals(41, java.util.stream.IntStream.range(0, samples)
+                .filter(i -> CoinSpawnRules.typeForRoll((i + 0.5) / samples, true)
+                        == CoinSpawnRules.Type.BLUE).count());
+        assertEquals(13, java.util.stream.IntStream.range(0, samples)
+                .filter(i -> CoinSpawnRules.typeForRoll((i + 0.5) / samples, true)
+                        == CoinSpawnRules.Type.GOLD).count());
+        assertEquals(CoinSpawnRules.Type.GOLD, CoinSpawnRules.typeForRoll(0.1, false));
+    }
+
+    @Test
     void onlySpawnsWhileBelowFiveActiveCoins() {
         assertTrue(CoinSpawnRules.hasRoom(4));
         assertFalse(CoinSpawnRules.hasRoom(5));

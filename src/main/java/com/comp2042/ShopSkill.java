@@ -7,7 +7,9 @@ enum ShopSkill {
     GOLD_COIN_UPGRADE("Gold Coin Upgrade", "Gain an extra +5 points for each Gold Coin.",
             300, "gold-coin-upgrade-card.png"),
     LENGTH_DECREASE("Length Decrease", "Decrease the snake's length by 5 segments.",
-            300, "length-decrease-card.png");
+            300, "length-decrease-card.png"),
+    BLUE_COIN("Blue Coin", "Unlock blue coins worth 10 coins without growing.", 150, "blue-coin-card.png"),
+    REVIVE("Revive", "Revive once after death.", 800, "revive-card.png");
 
     private final String title;
     private final String description;

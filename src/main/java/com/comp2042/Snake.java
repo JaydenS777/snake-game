@@ -11,6 +11,7 @@ public class Snake {
     private Color headColor = Color.web("2eb872");
     private Color bodyColor = Color.web("a3de83");
     private boolean dead = false;
+    private boolean invincible;
     private final Point head = new Point();
     private final ArrayList<Point> body = new ArrayList<>();
     private final int gx;
@@ -60,7 +61,7 @@ public class Snake {
         }
 
         if (nextX < 0 || nextY < 0 || nextX >= gx || nextY >= gy) {
-            if (!ignoreBorders && !noBorder) {
+            if (!invincible && !ignoreBorders && !noBorder) {
                 dead = true;
                 return;
             }
@@ -72,7 +73,7 @@ public class Snake {
         }
 
         Point nextHead = new Point(nextX, nextY);
-        if (obstacle.getObstacles().contains(nextHead)) {
+        if (!invincible && obstacle.getObstacles().contains(nextHead)) {
             dead = true;
             return;
         }
@@ -87,12 +88,42 @@ public class Snake {
             default -> 270;
         };
 
-        if (body.size() > 4 && hitSelf() && !body.get(0).equals(head)) {
+        if (!invincible && body.size() > 4 && body.subList(1, body.size()).contains(head)) {
             dead = true;
             // The tail still advances on the fatal step, so a collision cannot
             // make the snake appear to gain an extra segment.
             body.remove(0);
         }
+    }
+
+    char reviveFromTailHalf() {
+        int retainedLength = (body.size() + 2) / 2;
+        if (!body.isEmpty()) {
+            int retainedHeadIndex = retainedLength - 1;
+            Point next = retainedHeadIndex + 1 < body.size()
+                    ? body.get(retainedHeadIndex + 1) : new Point(head);
+            head.setLocation(body.get(retainedHeadIndex));
+            body.subList(retainedHeadIndex, body.size()).clear();
+            int forward = SnakeGeometry.directionBetween(head, next, gx, gy);
+            direction = switch (forward) {
+                case SnakeGeometry.UP -> 'U';
+                case SnakeGeometry.RIGHT -> 'R';
+                case SnakeGeometry.DOWN -> 'D';
+                default -> 'L';
+            };
+            snakeDir = forward;
+        }
+        dead = false;
+        return direction;
+    }
+
+    void enterInvincibility() {
+        invincible = true;
+    }
+
+    void exitInvincibility() {
+        invincible = false;
+        dead = hitSelf() || obstacle.getObstacles().contains(head);
     }
 
     boolean canMove(char dir) {
@@ -124,6 +155,9 @@ public class Snake {
     public Coin ateAnyCoin(java.util.List<Coin> coins) {
         for (Coin coin : coins) {
             if (head.equals(coin.getPos())) {
+                if (!coin.growsSnake() && !body.isEmpty()) {
+                    body.remove(0);
+                }
                 return coin;
             }
         }

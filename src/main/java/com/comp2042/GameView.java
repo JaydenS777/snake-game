@@ -14,6 +14,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -45,6 +46,8 @@ public class GameView {
 
     public Canvas gridCanvas;
     public GraphicsContext gc;
+    private Canvas snakeCanvas;
+    private GraphicsContext snakeGraphics;
 
     public Label gameOverLabel;
     public Label gameWonLabel;
@@ -74,6 +77,9 @@ public class GameView {
     private final List<ShopSkillCardView> shopSkillCardViews = new ArrayList<>();
     private Consumer<ShopSkill> shopSkillPurchaseHandler = skill -> { };
     private GridPane ownedSkillsGrid;
+    private ScrollPane ownedSkillsScroll;
+    private ImageView ownedReviveImage;
+    private ReviveAnimation reviveAnimation;
     private DoubleBinding ownedSkillCardWidth;
     private boolean gameOverVis = false;
     private boolean gameWonVis = false;
@@ -124,8 +130,15 @@ public class GameView {
         int purchaseLimit = SkillInventory.MAX_PURCHASES_PER_VISIT;
         chooseSkill.setText("◆  Choose a Skill  ◆    " + purchasesThisVisit + "/" + purchaseLimit);
         for (int i = 0; i < shopSkillCardViews.size(); i++) {
-            shopSkillCardViews.get(i).update(offers.get(i), points,
-                    ownedSkills.getOrDefault(offers.get(i), 0), bodySegments, purchasesThisVisit >= purchaseLimit);
+            ShopSkillCardView card = shopSkillCardViews.get(i);
+            boolean hasOffer = i < offers.size();
+            card.root.setManaged(hasOffer);
+            card.root.setVisible(hasOffer);
+            if (hasOffer) {
+                ShopSkill offer = offers.get(i);
+                card.update(offer, points, ownedSkills.getOrDefault(offer, 0),
+                        bodySegments, purchasesThisVisit >= purchaseLimit);
+            }
         }
     }
 
@@ -138,9 +151,11 @@ public class GameView {
             return;
         }
         ownedSkillsGrid.getChildren().clear();
+        ownedReviveImage = null;
         int cardIndex = 0;
         for (ShopSkill skill : ShopSkill.values()) {
-            if (ownedSkills.getOrDefault(skill, 0) == 0) {
+            int ownedCount = ownedSkills.getOrDefault(skill, 0);
+            if (ownedCount == 0) {
                 continue;
             }
             ImageView cardImage = new ImageView(shopSkillImages.get(skill));
@@ -149,7 +164,20 @@ public class GameView {
             cardImage.fitWidthProperty().bind(ownedSkillCardWidth);
             cardImage.setAccessibleText(skill.title());
             Tooltip.install(cardImage, new Tooltip(skill.title() + " — " + skill.description()));
-            ownedSkillsGrid.add(cardImage, cardIndex % 2, cardIndex / 2);
+            if (skill == ShopSkill.REVIVE) {
+                ownedReviveImage = cardImage;
+            }
+            if (skill == ShopSkill.REVIVE || skill == ShopSkill.RED_COIN_UPGRADE
+                    || skill == ShopSkill.GOLD_COIN_UPGRADE) {
+                Label count = new Label("×" + ownedCount);
+                count.getStyleClass().add("owned-skill-count");
+                count.setMouseTransparent(true);
+                StackPane tile = new StackPane(cardImage, count);
+                StackPane.setAlignment(count, Pos.TOP_RIGHT);
+                ownedSkillsGrid.add(tile, cardIndex % 2, cardIndex / 2);
+            } else {
+                ownedSkillsGrid.add(cardImage, cardIndex % 2, cardIndex / 2);
+            }
             cardIndex++;
         }
     }
@@ -164,6 +192,9 @@ public class GameView {
         initY = game.getHeight() * game.getMultiplier();
         gridCanvas = new Canvas(initX, initY);
         gc = gridCanvas.getGraphicsContext2D();
+        snakeCanvas = new Canvas(initX, initY);
+        snakeCanvas.setMouseTransparent(true);
+        snakeGraphics = snakeCanvas.getGraphicsContext2D();
         drawGrid(coins, snek, gc);
 
         gameOverLabel = new Label("GAME OVER");
@@ -406,7 +437,7 @@ public class GameView {
         ownedSkillsGrid = new GridPane();
         ownedSkillsGrid.setHgap(10);
         ownedSkillsGrid.setVgap(10);
-        ScrollPane ownedSkillsScroll = new ScrollPane(ownedSkillsGrid);
+        ownedSkillsScroll = new ScrollPane(ownedSkillsGrid);
         ownedSkillsScroll.setId("ownedSkillsScroll");
         ownedSkillsScroll.setFitToWidth(true);
         ownedSkillsScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -437,17 +468,12 @@ public class GameView {
         gamePlayfield.setMinSize(0, 0);
         gamePlayfield.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         gamePlayfield.getStylesheets().add(css);
-        gamePlayfield.getChildren().addAll(gridCanvas, gameOverLabel, gameWonLabel, restartButton,
-                pauseOverlay, resumeCountdownOverlay, gameOverOverlay);
+        gamePlayfield.getChildren().addAll(gridCanvas, snakeCanvas, gameOverLabel, gameWonLabel, restartButton);
         StackPane.setAlignment(gameOverLabel, Pos.TOP_CENTER);
         StackPane.setMargin(gameOverLabel, new Insets(24, 0, 0, 0));
         StackPane.setAlignment(gameWonLabel, Pos.TOP_CENTER);
         StackPane.setMargin(gameWonLabel, new Insets(24, 0, 0, 0));
         StackPane.setAlignment(restartButton, Pos.CENTER);
-        StackPane.setAlignment(pauseOverlay, Pos.CENTER);
-        StackPane.setAlignment(resumeCountdownOverlay, Pos.CENTER);
-        StackPane.setAlignment(gameOverOverlay, Pos.CENTER);
-        StackPane.setAlignment(shopOverlay, Pos.CENTER);
 
         HBox gameLayout = new HBox(20, sidebar, gamePlayfield);
         gameLayout.setId("gameLayout");
@@ -457,10 +483,55 @@ public class GameView {
 
         gamePlayfield.widthProperty().addListener((observable, oldValue, newValue) -> fitCanvasToPlayfield());
         gamePlayfield.heightProperty().addListener((observable, oldValue, newValue) -> fitCanvasToPlayfield());
-        StackPane root = new StackPane(gameLayout, shopOverlay);
+        StackPane root = new StackPane(gameLayout, pauseOverlay, gameOverOverlay,
+                resumeCountdownOverlay, shopOverlay);
         root.setId("gameRoot");
         root.getStylesheets().add(css);
+        configureWindowOverlays(root);
+        reviveAnimation = new ReviveAnimation(root);
         return root;
+    }
+
+    void playReviveAnimation(Runnable onFinished) {
+        if (ownedReviveImage != null) {
+            ownedSkillsScroll.applyCss();
+            ownedSkillsScroll.layout();
+            double viewport = ownedSkillsScroll.getViewportBounds().getHeight();
+            double scrollable = ownedSkillsGrid.getHeight() - viewport;
+            if (scrollable > 0) {
+                double cardY = ownedReviveImage.getParent().getBoundsInParent().getCenterY();
+                ownedSkillsScroll.setVvalue(Math.clamp((cardY - viewport / 2) / scrollable, 0, 1));
+                ownedSkillsScroll.layout();
+            }
+        }
+        reviveAnimation.play(ownedReviveImage, shopSkillImages.get(ShopSkill.REVIVE), onFinished);
+    }
+
+    void stopReviveAnimation() {
+        reviveAnimation.stop();
+    }
+
+    void setSnakeOpacity(double opacity) {
+        snakeCanvas.setOpacity(opacity);
+    }
+
+    private void configureWindowOverlays(StackPane root) {
+        for (StackPane overlay : List.of(pauseOverlay, gameOverOverlay, resumeCountdownOverlay)) {
+            overlay.setMinSize(0, 0);
+            overlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+            overlay.setPickOnBounds(true);
+            overlay.managedProperty().bind(overlay.visibleProperty());
+        }
+
+        DoubleBinding overlayScale = Bindings.createDoubleBinding(
+                () -> Math.clamp(Math.min(root.getWidth() / 780, root.getHeight() / 460), 0.8, 2.8),
+                root.widthProperty(), root.heightProperty());
+        pausePanel.scaleXProperty().bind(overlayScale);
+        pausePanel.scaleYProperty().bind(overlayScale);
+        gameOverPanel.scaleXProperty().bind(overlayScale);
+        gameOverPanel.scaleYProperty().bind(overlayScale);
+        resumeCountdownLabel.scaleXProperty().bind(overlayScale);
+        resumeCountdownLabel.scaleYProperty().bind(overlayScale);
     }
 
     private ImageView createShopCoinIcon(double size) {
@@ -494,7 +565,7 @@ public class GameView {
         private ShopSkillCardView() {
             root.getStyleClass().add("shop-skill-card-image");
             root.setAlignment(Pos.CENTER);
-            root.setMinWidth(180);
+            root.setMinWidth(0);
             root.setPrefWidth(300);
             root.setMaxWidth(Double.MAX_VALUE);
             root.prefHeightProperty().bind(root.widthProperty().multiply(CARD_ASPECT_RATIO));
@@ -510,7 +581,11 @@ public class GameView {
             cardImage.fitHeightProperty().bind(root.heightProperty());
 
             root.getChildren().add(cardImage);
-            root.setOnMouseClicked(event -> purchaseCurrentSkill());
+            root.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY) {
+                    purchaseCurrentSkill();
+                }
+            });
             root.setOnKeyPressed(event -> {
                 if (event.getCode() == javafx.scene.input.KeyCode.ENTER
                         || event.getCode() == javafx.scene.input.KeyCode.SPACE) {
@@ -562,6 +637,8 @@ public class GameView {
         }
         gridCanvas.setWidth(initX * fullScale);
         gridCanvas.setHeight(initY * fullScale);
+        snakeCanvas.setWidth(gridCanvas.getWidth());
+        snakeCanvas.setHeight(gridCanvas.getHeight());
         updateDisplayTextScale();
         if (currentObstacle != null) {
             drawGrid(currentCoins, currentSnake, currentObstacle, gc, false, 0);
@@ -580,15 +657,13 @@ public class GameView {
         scoreLabel.setStyle("-fx-font-size: " + (27 * scoreScale) + "px;");
         scoreHud.setScaleX(scoreScale);
         scoreHud.setScaleY(scoreScale);
-        resumeCountdownLabel.setStyle("-fx-font-size: " + (84 * textScale) + "px;");
         timeLabel.setStyle("-fx-font-size: " + (32 * textScale) + "px;");
-        pausePanel.setScaleX(textScale);
-        pausePanel.setScaleY(textScale);
-        gameOverPanel.setScaleX(textScale);
-        gameOverPanel.setScaleY(textScale);
     }
 
     public void drawGrid(List<Coin> coins, Snake snek, Obstacle obstacle, GraphicsContext gc, boolean a, int b) {
+        currentSnake = snek;
+        currentCoins = coins;
+        currentObstacle = obstacle;
         drawGameBackground(gc);
 
         drawCoins(coins, gc);
@@ -610,20 +685,20 @@ public class GameView {
     }
 
     private void drawSnake(Snake snek) {
-        gc.setImageSmoothing(false);
+        snakeGraphics.clearRect(0, 0, snakeCanvas.getWidth(), snakeCanvas.getHeight());
+        snakeGraphics.setImageSmoothing(false);
         List<Point> body = snek.getBody();
         for (int index = 0; index < body.size(); index++) {
             drawBody(snek, body, snek.getHead(), body.get(index), index);
         }
         drawBodySeams(body, snek.getHead());
         drawHead(snek);
-        gc.setImageSmoothing(true);
     }
 
     private void drawBodySeams(List<Point> body, Point head) {
         double cellSize = game.getMultiplier() * fullScale;
-        gc.setStroke(Color.web("#24581d"));
-        gc.setLineWidth(Math.max(1.5, 2.0 * fullScale));
+        snakeGraphics.setStroke(Color.web("#24581d"));
+        snakeGraphics.setLineWidth(Math.max(1.5, 2.0 * fullScale));
         for (int index = 0; index < body.size(); index++) {
             Point from = body.get(index);
             Point to = index + 1 < body.size() ? body.get(index + 1) : head;
@@ -655,11 +730,11 @@ public class GameView {
     }
 
     private void drawVerticalSeam(double x, double centerY, double halfSpan) {
-        gc.strokeLine(x, centerY - halfSpan, x, centerY + halfSpan);
+        snakeGraphics.strokeLine(x, centerY - halfSpan, x, centerY + halfSpan);
     }
 
     private void drawHorizontalSeam(double centerX, double y, double halfSpan) {
-        gc.strokeLine(centerX - halfSpan, y, centerX + halfSpan, y);
+        snakeGraphics.strokeLine(centerX - halfSpan, y, centerX + halfSpan, y);
     }
 
     private void drawGameBackground(GraphicsContext graphics) {
@@ -671,9 +746,8 @@ public class GameView {
         gc.setImageSmoothing(false);
         for (Coin coin : coins) {
             Point position = coin.getPos();
-            gc.drawImage(coin.getImage(), (position.x * game.getMultiplier()) * fullScale,
+            coin.draw(gc, (position.x * game.getMultiplier()) * fullScale,
                     (position.y * game.getMultiplier()) * fullScale,
-                    game.getMultiplier() * fullScale - 3 * fullScale,
                     game.getMultiplier() * fullScale - 3 * fullScale);
         }
         gc.setImageSmoothing(true);
@@ -714,13 +788,13 @@ public class GameView {
 
     private void drawSprite(Image sheet, SnakeSpriteSheet.SpriteRegion sprite, int rotation,
                             double centerX, double centerY, double drawSize) {
-        gc.save();
-        gc.translate(centerX, centerY);
-        gc.rotate(rotation);
-        gc.drawImage(sheet,
+        snakeGraphics.save();
+        snakeGraphics.translate(centerX, centerY);
+        snakeGraphics.rotate(rotation);
+        snakeGraphics.drawImage(sheet,
                 sprite.x(), sprite.y(), sprite.width(), sprite.height(),
                 -drawSize / 2, -drawSize / 2, drawSize, drawSize);
-        gc.restore();
+        snakeGraphics.restore();
     }
 
     public void gameOver(Snake snek) {

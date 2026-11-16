@@ -177,7 +177,7 @@
 }
 
 .resume-countdown-overlay {
-    -fx-background-color: rgba(0, 0, 0, 0.35);
+    -fx-background-color: rgba(0, 0, 0, 0.55);
 }
 
 #resumeCountdownLabel {
@@ -634,4 +634,13 @@
 
 #ownedSkillsScroll > .viewport {
     -fx-background-color: transparent;
+}
+
+.owned-skill-count {
+    -fx-font-family: "SF Pixelate";
+    -fx-font-size: 22;
+    -fx-text-fill: #fff2ff;
+    -fx-background-color: #491268;
+    -fx-background-radius: 8;
+    -fx-padding: 3 8;
 }

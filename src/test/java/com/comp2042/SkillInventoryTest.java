@@ -17,6 +17,33 @@ class SkillInventoryTest {
     }
 
     @Test
+    void blueCoinCanOnlyBeUnlockedOncePerGame() {
+        Game game = new Game(20, 20, false, 'N');
+        game.addPoints(300);
+        Snake snake = new Snake(20, 20, false, new Obstacle(20, 20));
+        SkillInventory inventory = new SkillInventory();
+        assertFalse(inventory.isBlueCoinUnlocked());
+        assertTrue(inventory.purchase(ShopSkill.BLUE_COIN, game, snake));
+        inventory.startShopVisit();
+        assertTrue(inventory.isBlueCoinUnlocked());
+        assertFalse(inventory.purchase(ShopSkill.BLUE_COIN, game, snake));
+        assertEquals(150, game.getScorePoints());
+        inventory.reset();
+        assertFalse(inventory.isBlueCoinUnlocked());
+    }
+
+    @Test
+    void eatingBlueCoinPaysTenWithoutGrowing() {
+        Snake snake = new Snake(20, 20, false, new Obstacle(20, 20));
+        int initialLength = snake.getBody().size();
+        snake.move('L');
+        Coin blueCoin = new BlueCoin(snake.getHead());
+        assertEquals(blueCoin, snake.ateAnyCoin(java.util.List.of(blueCoin)));
+        assertEquals(10, blueCoin.getPoints());
+        assertEquals(initialLength, snake.getBody().size());
+    }
+
+    @Test
     void purchasedCoinUpgradesAddTheirBonusAndStack() {
         Game game = new Game(20, 20, false, 'N');
         game.addPoints(900);
