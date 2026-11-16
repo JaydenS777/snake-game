@@ -4,17 +4,22 @@ import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.paint.Color;
@@ -26,8 +31,12 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Consumer;
 
 public class GameView {
     static final String GAME_BACKGROUND_COLOR = "#07210b";
@@ -61,6 +70,11 @@ public class GameView {
     public Button shopContinueButton;
     public Label shopPointsLabel;
     public Label shopRefreshCountLabel;
+    private Label chooseSkill;
+    private final List<ShopSkillCardView> shopSkillCardViews = new ArrayList<>();
+    private Consumer<ShopSkill> shopSkillPurchaseHandler = skill -> { };
+    private GridPane ownedSkillsGrid;
+    private DoubleBinding ownedSkillCardWidth;
     private boolean gameOverVis = false;
     private boolean gameWonVis = false;
 
@@ -76,6 +90,7 @@ public class GameView {
     private List<Coin> currentCoins;
     private Obstacle currentObstacle;
     private Timeline timeProgressTimeline;
+    private final Map<ShopSkill, Image> shopSkillImages = new EnumMap<>(ShopSkill.class);
     public GameView(Game game) {
         this.game = game;
     }
@@ -89,8 +104,9 @@ public class GameView {
         resumeCountdownOverlay.setVisible(!number.isEmpty());
     }
 
-    public void showShop(int points) {
-        updateShop(points, 0);
+    public void showShop(int points, int refreshesUsed, List<ShopSkill> offers,
+                         Map<ShopSkill, Integer> ownedSkills, int bodySegments, int purchasesThisVisit) {
+        updateShop(points, refreshesUsed, offers, ownedSkills, bodySegments, purchasesThisVisit);
         setShopVisible(true);
     }
 
@@ -99,14 +115,49 @@ public class GameView {
         shopOverlay.setManaged(visible);
     }
 
-    public void updateShop(int points, int refreshesUsed) {
+    public void updateShop(int points, int refreshesUsed, List<ShopSkill> offers,
+                           Map<ShopSkill, Integer> ownedSkills, int bodySegments, int purchasesThisVisit) {
         shopPointsLabel.setText(shopPointsText(points));
         shopRefreshCountLabel.setText(refreshesUsed + "/" + ShopRefreshRules.MAX_REFRESHES);
         shopRefreshButton.setDisable(refreshesUsed >= ShopRefreshRules.MAX_REFRESHES
                 || points < ShopRefreshRules.COST);
+        int purchaseLimit = SkillInventory.MAX_PURCHASES_PER_VISIT;
+        chooseSkill.setText("◆  Choose a Skill  ◆    " + purchasesThisVisit + "/" + purchaseLimit);
+        for (int i = 0; i < shopSkillCardViews.size(); i++) {
+            shopSkillCardViews.get(i).update(offers.get(i), points,
+                    ownedSkills.getOrDefault(offers.get(i), 0), bodySegments, purchasesThisVisit >= purchaseLimit);
+        }
+    }
+
+    public void setShopSkillPurchaseHandler(Consumer<ShopSkill> handler) {
+        shopSkillPurchaseHandler = handler == null ? skill -> { } : handler;
+    }
+
+    public void updateOwnedSkills(Map<ShopSkill, Integer> ownedSkills) {
+        if (ownedSkillsGrid == null) {
+            return;
+        }
+        ownedSkillsGrid.getChildren().clear();
+        int cardIndex = 0;
+        for (ShopSkill skill : ShopSkill.values()) {
+            if (ownedSkills.getOrDefault(skill, 0) == 0) {
+                continue;
+            }
+            ImageView cardImage = new ImageView(shopSkillImages.get(skill));
+            cardImage.setPreserveRatio(true);
+            cardImage.setSmooth(true);
+            cardImage.fitWidthProperty().bind(ownedSkillCardWidth);
+            cardImage.setAccessibleText(skill.title());
+            Tooltip.install(cardImage, new Tooltip(skill.title() + " — " + skill.description()));
+            ownedSkillsGrid.add(cardImage, cardIndex % 2, cardIndex / 2);
+            cardIndex++;
+        }
     }
 
     public void makeScene(Snake snek, List<Coin> coins) {
+        for (ShopSkill skill : ShopSkill.values()) {
+            shopSkillImages.put(skill, new Image("resources/views/res/" + skill.imageResource()));
+        }
         currentSnake = snek;
         currentCoins = coins;
         initX = game.getWidth() * game.getMultiplier();
@@ -242,10 +293,18 @@ public class GameView {
         shopSidebar.setMinWidth(220);
         shopSidebar.setMaxWidth(320);
 
-        Label chooseSkill = new Label("◆  Choose a Skill  ◆");
+        chooseSkill = new Label("◆  Choose a Skill  ◆");
         chooseSkill.setId("chooseSkillTitle");
-        Pane emptySkillOptions = new Pane();
-        VBox.setVgrow(emptySkillOptions, Priority.ALWAYS);
+        HBox shopCards = new HBox(18);
+        shopCards.setId("shopCards");
+        shopCards.setAlignment(Pos.CENTER);
+        for (int i = 0; i < ShopSkill.values().length; i++) {
+            ShopSkillCardView cardView = new ShopSkillCardView();
+            shopSkillCardViews.add(cardView);
+            shopCards.getChildren().add(cardView.root);
+            HBox.setHgrow(cardView.root, Priority.ALWAYS);
+        }
+        VBox.setVgrow(shopCards, Priority.ALWAYS);
 
         shopRefreshButton = new Button();
         shopRefreshButton.getStyleClass().add("shop-refresh-button");
@@ -263,17 +322,29 @@ public class GameView {
 
         shopRefreshCountLabel = new Label("0/" + ShopRefreshRules.MAX_REFRESHES);
         shopRefreshCountLabel.setId("shopRefreshCountLabel");
-        VBox refreshGroup = new VBox(3, shopRefreshButton, shopRefreshCountLabel);
-        refreshGroup.setAlignment(Pos.CENTER);
 
         shopContinueButton = new Button("▶  Continue");
         shopContinueButton.getStyleClass().add("shop-continue-button");
         shopContinueButton.setFocusTraversable(false);
-        HBox shopFooter = new HBox(54, refreshGroup, shopContinueButton);
+        GridPane shopFooter = new GridPane();
         shopFooter.setId("shopFooter");
         shopFooter.setAlignment(Pos.CENTER);
+        shopFooter.setVgap(3);
+        shopFooter.setMaxWidth(Region.USE_PREF_SIZE);
+        ColumnConstraints refreshColumn = new ColumnConstraints();
+        refreshColumn.setPercentWidth(50);
+        ColumnConstraints continueColumn = new ColumnConstraints();
+        continueColumn.setPercentWidth(50);
+        shopFooter.getColumnConstraints().addAll(refreshColumn, continueColumn);
+        for (Button button : List.of(shopRefreshButton, shopContinueButton)) {
+            button.setMinWidth(0);
+            button.setMaxWidth(Double.MAX_VALUE);
+        }
+        shopFooter.addRow(0, shopRefreshButton, shopContinueButton);
+        shopFooter.add(shopRefreshCountLabel, 0, 1);
+        GridPane.setHalignment(shopRefreshCountLabel, javafx.geometry.HPos.CENTER);
 
-        shopPanel = new VBox(20, chooseSkill, emptySkillOptions, shopFooter);
+        shopPanel = new VBox(20, chooseSkill, shopCards, shopFooter);
         shopPanel.setId("shopPanel");
         shopPanel.setAlignment(Pos.TOP_CENTER);
         shopPanel.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -332,9 +403,22 @@ public class GameView {
 
         Label skillsHeading = new Label("Owned Skills");
         skillsHeading.getStyleClass().add("sidebar-section-heading");
-        Pane emptySkills = new Pane();
-        VBox.setVgrow(emptySkills, Priority.ALWAYS);
-        VBox skillsPanel = new VBox(14, skillsHeading, emptySkills);
+        ownedSkillsGrid = new GridPane();
+        ownedSkillsGrid.setHgap(10);
+        ownedSkillsGrid.setVgap(10);
+        ScrollPane ownedSkillsScroll = new ScrollPane(ownedSkillsGrid);
+        ownedSkillsScroll.setId("ownedSkillsScroll");
+        ownedSkillsScroll.setFitToWidth(true);
+        ownedSkillsScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        ownedSkillsScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        ownedSkillsScroll.setPannable(true);
+        ownedSkillsScroll.setMaxWidth(Double.MAX_VALUE);
+        ownedSkillCardWidth = Bindings.createDoubleBinding(
+                () -> Math.max(1, Math.floor((ownedSkillsScroll.getViewportBounds().getWidth()
+                        - ownedSkillsGrid.getHgap()) / 2)),
+                ownedSkillsScroll.viewportBoundsProperty(), ownedSkillsGrid.hgapProperty());
+        VBox.setVgrow(ownedSkillsScroll, Priority.ALWAYS);
+        VBox skillsPanel = new VBox(14, skillsHeading, ownedSkillsScroll);
         skillsPanel.setId("sidebarSkillsPanel");
         skillsPanel.setAlignment(Pos.TOP_LEFT);
         VBox.setVgrow(skillsPanel, Priority.ALWAYS);
@@ -397,6 +481,61 @@ public class GameView {
         button.getStyleClass().add(styleClass);
         button.setPrefSize(220, 48);
         return button;
+    }
+
+    private final class ShopSkillCardView {
+        private static final double CARD_ASPECT_RATIO = 1402.0 / 1122.0;
+
+        private final StackPane root = new StackPane();
+        private final ImageView cardImage = new ImageView();
+        private final Tooltip tooltip = new Tooltip("Click the card to buy");
+        private ShopSkill skill;
+
+        private ShopSkillCardView() {
+            root.getStyleClass().add("shop-skill-card-image");
+            root.setAlignment(Pos.CENTER);
+            root.setMinWidth(180);
+            root.setPrefWidth(300);
+            root.setMaxWidth(Double.MAX_VALUE);
+            root.prefHeightProperty().bind(root.widthProperty().multiply(CARD_ASPECT_RATIO));
+            root.setMaxHeight(Double.MAX_VALUE);
+            root.setFocusTraversable(true);
+            root.setCursor(javafx.scene.Cursor.HAND);
+            root.setPickOnBounds(true);
+            Tooltip.install(root, tooltip);
+
+            cardImage.setPreserveRatio(true);
+            cardImage.setSmooth(true);
+            cardImage.fitWidthProperty().bind(root.widthProperty());
+            cardImage.fitHeightProperty().bind(root.heightProperty());
+
+            root.getChildren().add(cardImage);
+            root.setOnMouseClicked(event -> purchaseCurrentSkill());
+            root.setOnKeyPressed(event -> {
+                if (event.getCode() == javafx.scene.input.KeyCode.ENTER
+                        || event.getCode() == javafx.scene.input.KeyCode.SPACE) {
+                    purchaseCurrentSkill();
+                    event.consume();
+                }
+            });
+        }
+
+        private void purchaseCurrentSkill() {
+            if (skill != null && !root.isDisabled()) {
+                shopSkillPurchaseHandler.accept(skill);
+            }
+        }
+
+        private void update(ShopSkill newSkill, int balance, int ownedCount, int bodySegments, boolean limitReached) {
+            skill = newSkill;
+            cardImage.setImage(shopSkillImages.get(newSkill));
+            boolean enoughSegments = newSkill != ShopSkill.LENGTH_DECREASE || bodySegments >= 5;
+            root.setDisable(limitReached || balance < newSkill.cost() || !enoughSegments);
+            root.setAccessibleText(newSkill.title() + ", " + newSkill.description()
+                    + " Cost: " + newSkill.cost() + ". Owned: " + ownedCount);
+            tooltip.setText("Click the card to buy — " + newSkill.title()
+                    + " — " + newSkill.cost() + " coins");
+        }
     }
 
     public void scaleToFullscreen(boolean fullScreen, Stage primaryStage, Obstacle obstacle, Snake snek, List<Coin> coins) {

@@ -531,7 +531,7 @@
 }
 
 #shopFooter {
-    -fx-spacing: 54;
+    -fx-hgap: 54;
     -fx-padding: 14 0 0 0;
 }
 
@@ -545,8 +545,6 @@
     -fx-border-color: #a5ed4b;
     -fx-border-width: 4;
     -fx-border-radius: 24;
-    -fx-pref-width: 500;
-    -fx-pref-height: 92;
     -fx-padding: 8 26 8 26;
 }
 
@@ -592,8 +590,14 @@
     -fx-border-color: #c0ff60;
     -fx-border-width: 4;
     -fx-border-radius: 24;
-    -fx-pref-width: 430;
+}
+
+.shop-refresh-button,
+.shop-continue-button {
+    -fx-pref-width: 500;
     -fx-pref-height: 92;
+    -fx-min-height: 92;
+    -fx-max-height: 92;
 }
 
 .shop-continue-button:pressed,
@@ -604,4 +608,30 @@
     -fx-border-color: #c0ff60;
     -fx-border-width: 4;
     -fx-border-radius: 24;
+}
+
+#shopCards {
+    -fx-spacing: 18;
+}
+
+.shop-skill-card-image {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.shop-skill-card-image:disabled {
+    -fx-opacity: 0.48;
+}
+
+#ownedSkillsScroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+#ownedSkillsScroll > .viewport {
+    -fx-background-color: transparent;
 }

@@ -151,6 +151,7 @@ public class MainMenuController {
         gameView.shopContinueButton.setOnAction(event -> controller.continueFromShop());
         gameView.shopBackButton.setOnAction(event -> controller.continueFromShop());
         gameView.shopRefreshButton.setOnAction(event -> controller.refreshShop());
+        gameView.setShopSkillPurchaseHandler(controller::purchaseShopSkill);
         viewManager.showGameView(gameView.createGameLayout());
     }
 

@@ -28,6 +28,8 @@ public class GameController {
     private final ResumeCountdown resumeCountdown = new ResumeCountdown();
     private final ShopCountdown shopCountdown = new ShopCountdown();
     private final ShopRefreshRules shopRefreshRules = new ShopRefreshRules();
+    private final SkillInventory skillInventory = new SkillInventory();
+    private List<ShopSkill> shopOffers = ShopOfferRules.initialOffers();
     private final Timeline resumeCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> advanceResumeCountdown()));
     private final Timeline shopCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> tickShopCountdown()));
     private Timeline coinSpawnTimeline;
@@ -78,7 +80,10 @@ public class GameController {
             pauseCoinSpawner();
             shopOpen = true;
             shopRefreshRules.reset();
-            gameView.showShop(game.getScorePoints());
+            skillInventory.startShopVisit();
+            shopOffers = ShopOfferRules.initialOffers();
+            gameView.showShop(game.getScorePoints(), shopRefreshRules.refreshesUsed(),
+                    shopOffers, skillInventory.counts(), snek.getBody().size(), skillInventory.purchasesThisVisit());
         }
     }
 
@@ -181,7 +186,7 @@ public class GameController {
                 Coin eatenCoin = snek.ateAnyCoin(coins);
                 if (eatenCoin != null) {
                     coins.remove(eatenCoin);
-                    game.addPoints(eatenCoin.getPoints());
+                    game.addPoints(eatenCoin.getPoints() + skillInventory.bonusPointsFor(eatenCoin));
                     game.incScore();
                     if (game.gameWon()) {
                         gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
@@ -335,14 +340,31 @@ public class GameController {
 
     public void refreshShop() {
         if (!shopOpen || !shopRefreshRules.canRefresh(game.getScorePoints())) {
-            gameView.updateShop(game.getScorePoints(), shopRefreshRules.refreshesUsed());
+            updateShopView();
             return;
         }
         if (game.spendPoints(ShopRefreshRules.COST)) {
             shopRefreshRules.recordRefresh(game.getScorePoints() + ShopRefreshRules.COST);
+            shopOffers = ShopOfferRules.reroll(random);
             gameView.updateScoreLabel();
-            gameView.updateShop(game.getScorePoints(), shopRefreshRules.refreshesUsed());
+            updateShopView();
         }
+    }
+
+    public void purchaseShopSkill(ShopSkill skill) {
+        if (!shopOpen || resumeFromShopCountdown || !skillInventory.purchase(skill, game, snek)) {
+            updateShopView();
+            return;
+        }
+        gameView.updateScoreLabel();
+        gameView.updateOwnedSkills(skillInventory.counts());
+        gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
+        updateShopView();
+    }
+
+    private void updateShopView() {
+        gameView.updateShop(game.getScorePoints(), shopRefreshRules.refreshesUsed(),
+                shopOffers, skillInventory.counts(), snek.getBody().size(), skillInventory.purchasesThisVisit());
     }
 
     public void exitToMenu() {
@@ -403,6 +425,9 @@ public class GameController {
         key = KeyCode.LEFT;
         keyPressed = false;
         game.resetScore();
+        skillInventory.reset();
+        shopOffers = ShopOfferRules.initialOffers();
+        gameView.updateOwnedSkills(skillInventory.counts());
 
         gameView.gameWon();
         gameView.gameOver(snek);

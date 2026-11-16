@@ -3,7 +3,7 @@ package com.comp2042;
 import javafx.scene.image.Image;
 
 public class GoldCoin extends Coin {
-    private Image image = new Image("resources/views/res/goldcoin-v4.png");
+    private Image image;
 
     public GoldCoin(int x, int y, Snake snek, Obstacle obstacle) {
         super(x, y, snek, obstacle);
@@ -14,6 +14,9 @@ public class GoldCoin extends Coin {
     }
 
     public Image getImage() {
+        if (image == null) {
+            image = new Image("resources/views/res/goldcoin-v4.png");
+        }
         return image;
     }
 

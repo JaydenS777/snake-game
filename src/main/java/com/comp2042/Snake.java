@@ -141,6 +141,17 @@ public class Snake {
         return new ArrayList<>(body);
     }
 
+    int removeTailSegments(int segments) {
+        if (segments < 0) {
+            throw new IllegalArgumentException("Segment count cannot be negative.");
+        }
+        int removed = Math.min(segments, body.size());
+        for (int i = 0; i < removed; i++) {
+            body.remove(0);
+        }
+        return removed;
+    }
+
     public Point getHead() {
         return new Point(head);
     }

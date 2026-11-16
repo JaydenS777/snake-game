@@ -40,6 +40,16 @@ class SnakeSpriteAssetsTest {
     }
 
     @Test
+    void suppliedShopCardsAreAvailableAtTheirOriginalResolution() throws IOException {
+        for (ShopSkill skill : ShopSkill.values()) {
+            BufferedImage image = load(skill.imageResource());
+            assertEquals(1122, image.getWidth());
+            assertEquals(1402, image.getHeight());
+            assertEquals(0, image.getRGB(0, 0) >>> 24);
+        }
+    }
+
+    @Test
     void approvedSpriteSheetHasFourValidArtworkRegions() throws IOException {
         BufferedImage sheet = load("snake-sprites.png");
 
