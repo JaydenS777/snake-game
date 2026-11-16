@@ -6,6 +6,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -117,16 +118,10 @@ public class MainMenuController {
     }
 
     private void launchSnake(Stage gameStage) {
-        Rectangle2D bounds = viewManager.isFullscreenMode()
-                ? Screen.getPrimary().getBounds()
-                : Screen.getPrimary().getVisualBounds();
-        double viewportWidth = bounds.getWidth();
-        double viewportHeight = bounds.getHeight();
-        if (!viewManager.isFullscreenMode()) {
-            viewportWidth *= GameDimensions.WINDOWED_SCREEN_FRACTION;
-            viewportHeight *= GameDimensions.WINDOWED_SCREEN_FRACTION;
-        }
-        GameDimensions.Grid grid = GameDimensions.forSidebarLayout(viewportWidth, viewportHeight);
+        Rectangle2D fullscreenBounds = Screen.getPrimary().getBounds();
+        double fullscreenWidth = fullscreenBounds.getWidth();
+        double fullscreenHeight = fullscreenBounds.getHeight();
+        GameDimensions.Grid grid = GameDimensions.forSidebarLayout(fullscreenWidth, fullscreenHeight);
         Game game = new Game(grid.columns(), grid.rows(), POWER_UP, DIFFICULTY, grid.cellSize());
         obstacle = new Obstacle(game.getWidth(), game.getHeight());
         snek = new Snake(game.getWidth(), game.getHeight(), game.isNoBorder(), obstacle);
@@ -153,8 +148,10 @@ public class MainMenuController {
         gameView.shopRefreshButton.setOnAction(event -> controller.refreshShop());
         gameView.setShopSkillPurchaseHandler(controller::purchaseShopSkill);
         var gameLayout = gameView.createGameLayout();
+        var viewport = new GameViewport(gameLayout, fullscreenWidth, fullscreenHeight);
+        viewport.addEventFilter(KeyEvent.KEY_PRESSED, controller::filterMovementKey);
         controller.initializeOwnedSkills();
-        viewManager.showGameView(gameLayout);
+        viewManager.showGameView(viewport);
     }
 
     public ViewManager getViewManager() {

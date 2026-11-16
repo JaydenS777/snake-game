@@ -33,7 +33,7 @@ public class GameController {
     private final ShopCountdown shopCountdown = new ShopCountdown();
     private final ShopRefreshRules shopRefreshRules = new ShopRefreshRules();
     private final SkillInventory skillInventory = new SkillInventory();
-    private List<ShopSkill> shopOffers = ShopOfferRules.initialOffers(false);
+    private List<ShopSkill> shopOffers = List.of();
     private final Timeline resumeCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> advanceResumeCountdown()));
     private final Timeline shopCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> tickShopCountdown()));
     private Timeline coinSpawnTimeline;
@@ -93,7 +93,7 @@ public class GameController {
             shopOpen = true;
             shopRefreshRules.reset();
             skillInventory.startShopVisit();
-            shopOffers = ShopOfferRules.initialOffers(skillInventory.isBlueCoinUnlocked());
+            shopOffers = ShopOfferRules.reroll(random, skillInventory.isBlueCoinUnlocked());
             gameView.showShop(game.getScorePoints(), shopRefreshRules.refreshesUsed(),
                     shopOffers, skillInventory.counts(), snek.getBody().size(), skillInventory.purchasesThisVisit());
         }
@@ -297,6 +297,14 @@ public class GameController {
         }
     }));
 
+    void filterMovementKey(KeyEvent event) {
+        if (event.getCode().isArrowKey() && !shopOpen && !reviving && !pauseState.isPaused()
+                && !resumeCountdownRunning && !gameEnded(game, snek)) {
+            handle(event);
+            event.consume();
+        }
+    }
+
     public void handle(KeyEvent event) {
         if (shopOpen || reviving) {
             return;
@@ -414,7 +422,10 @@ public class GameController {
     }
 
     public void refreshShop() {
-        if (!shopOpen || !shopRefreshRules.canRefresh(game.getScorePoints())) {
+        if (!shopOpen || resumeFromShopCountdown) {
+            return;
+        }
+        if (!shopRefreshRules.canRefresh(game.getScorePoints())) {
             updateShopView();
             return;
         }
@@ -427,13 +438,15 @@ public class GameController {
     }
 
     public void purchaseShopSkill(ShopSkill skill) {
-        if (!shopOpen || resumeFromShopCountdown || !shopOffers.contains(skill)
-                || !skillInventory.purchase(skill, game, snek)) {
+        if (!shopOpen || resumeFromShopCountdown) {
+            return;
+        }
+        if (!shopOffers.contains(skill) || !skillInventory.purchase(skill, game, snek)) {
             updateShopView();
             return;
         }
         if (skill == ShopSkill.BLUE_COIN) {
-            shopOffers = shopOffers.stream().filter(offer -> offer != ShopSkill.BLUE_COIN).toList();
+            shopOffers = ShopOfferRules.replaceBlueOffer(shopOffers, random);
         }
         gameView.updateScoreLabel();
         gameView.updateOwnedSkills(skillInventory.counts());
@@ -509,7 +522,7 @@ public class GameController {
         keyPressed = false;
         game.resetScore();
         skillInventory.reset();
-        shopOffers = ShopOfferRules.initialOffers(false);
+        shopOffers = List.of();
         gameView.updateOwnedSkills(skillInventory.counts());
 
         gameView.gameWon();

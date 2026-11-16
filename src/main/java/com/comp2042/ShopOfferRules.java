@@ -4,32 +4,33 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-/** Rerolls the ordinary cards and keeps the special offers available. */
+/** Picks three offers and reserves one slot for the unpurchased blue coin unlock. */
 final class ShopOfferRules {
+    static final int SLOT_COUNT = 3;
     private static final List<ShopSkill> STANDARD_SKILLS = List.of(
-            ShopSkill.RED_COIN_UPGRADE, ShopSkill.GOLD_COIN_UPGRADE, ShopSkill.LENGTH_DECREASE);
+            ShopSkill.RED_COIN_UPGRADE, ShopSkill.GOLD_COIN_UPGRADE, ShopSkill.LENGTH_DECREASE, ShopSkill.REVIVE);
 
     private ShopOfferRules() {
     }
 
-    static List<ShopSkill> initialOffers(boolean blueUnlocked) {
-        return includeBlueCard(STANDARD_SKILLS, blueUnlocked);
-    }
-
     static List<ShopSkill> reroll(Random random, boolean blueUnlocked) {
-        List<ShopSkill> offers = new ArrayList<>();
-        for (int i = 0; i < STANDARD_SKILLS.size(); i++) {
-            offers.add(STANDARD_SKILLS.get(random.nextInt(STANDARD_SKILLS.size())));
+        var available = new ArrayList<>(STANDARD_SKILLS);
+        var offers = new ArrayList<ShopSkill>(SLOT_COUNT);
+        int randomSlots = blueUnlocked ? SLOT_COUNT : SLOT_COUNT - 1;
+        for (int i = 0; i < randomSlots; i++) {
+            offers.add(available.remove(random.nextInt(available.size())));
         }
-        return includeBlueCard(offers, blueUnlocked);
+        if (!blueUnlocked) {
+            offers.add(ShopSkill.BLUE_COIN);
+        }
+        return List.copyOf(offers);
     }
 
-    private static List<ShopSkill> includeBlueCard(List<ShopSkill> offers, boolean blueUnlocked) {
-        List<ShopSkill> result = new ArrayList<>(offers);
-        if (!blueUnlocked) {
-            result.add(ShopSkill.BLUE_COIN);
-        }
-        result.add(ShopSkill.REVIVE);
-        return List.copyOf(result);
+    static List<ShopSkill> replaceBlueOffer(List<ShopSkill> offers, Random random) {
+        var available = new ArrayList<>(STANDARD_SKILLS);
+        available.removeAll(offers);
+        var updated = new ArrayList<>(offers);
+        updated.set(SLOT_COUNT - 1, available.get(random.nextInt(available.size())));
+        return List.copyOf(updated);
     }
 }

@@ -4,28 +4,41 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 import java.util.List;
+import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ShopOfferRulesTest {
     @Test
-    void initialShopShowsBlueWithTheThreeStandardSkillsUntilUnlocked() {
-        assertEquals(List.of(ShopSkill.values()), ShopOfferRules.initialOffers(false));
-        assertEquals(List.of(ShopSkill.RED_COIN_UPGRADE, ShopSkill.GOLD_COIN_UPGRADE,
-                ShopSkill.LENGTH_DECREASE, ShopSkill.REVIVE), ShopOfferRules.initialOffers(true));
+    void shopRerollsTwoSlotsBeforeUnlockAndThreeAfter() {
+        var random = new Random(7);
+        boolean sawRevive = false;
+        boolean sawShopWithoutRevive = false;
+        for (int i = 0; i < 24; i++) {
+            var locked = ShopOfferRules.reroll(random, false);
+            assertEquals(3, locked.size());
+            assertEquals(3, new HashSet<>(locked).size());
+            assertEquals(ShopSkill.BLUE_COIN, locked.getLast());
+            sawRevive |= locked.contains(ShopSkill.REVIVE);
+            sawShopWithoutRevive |= !locked.contains(ShopSkill.REVIVE);
+
+            var unlocked = ShopOfferRules.reroll(random, true);
+            assertEquals(3, unlocked.size());
+            assertEquals(3, new HashSet<>(unlocked).size());
+            assertFalse(unlocked.contains(ShopSkill.BLUE_COIN));
+        }
+        assertTrue(sawRevive);
+        assertTrue(sawShopWithoutRevive);
     }
 
     @Test
-    void refreshKeepsBlueInTheSameSlotUntilPurchased() {
-        var locked = ShopOfferRules.reroll(new Random(7), false);
-        var unlocked = ShopOfferRules.reroll(new Random(7), true);
-
-        assertEquals(5, locked.size());
-        assertEquals(ShopSkill.BLUE_COIN, locked.get(3));
-        assertEquals(unlocked.subList(0, 3), locked.subList(0, 3));
-        assertEquals(ShopSkill.REVIVE, locked.getLast());
-        assertEquals(ShopSkill.REVIVE, unlocked.getLast());
-        assertFalse(unlocked.contains(ShopSkill.BLUE_COIN));
+    void purchasingBlueFillsOnlyItsOwnSlotWithAnAvailableCard() {
+        var previous = List.of(ShopSkill.RED_COIN_UPGRADE, ShopSkill.REVIVE, ShopSkill.BLUE_COIN);
+        var updated = ShopOfferRules.replaceBlueOffer(previous, new Random(7));
+        assertEquals(3, updated.size());
+        assertEquals(previous.subList(0, 2), updated.subList(0, 2));
+        assertTrue(List.of(ShopSkill.GOLD_COIN_UPGRADE, ShopSkill.LENGTH_DECREASE).contains(updated.getLast()));
     }
 }

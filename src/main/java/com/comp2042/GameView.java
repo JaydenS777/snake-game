@@ -131,14 +131,9 @@ public class GameView {
         chooseSkill.setText("◆  Choose a Skill  ◆    " + purchasesThisVisit + "/" + purchaseLimit);
         for (int i = 0; i < shopSkillCardViews.size(); i++) {
             ShopSkillCardView card = shopSkillCardViews.get(i);
-            boolean hasOffer = i < offers.size();
-            card.root.setManaged(hasOffer);
-            card.root.setVisible(hasOffer);
-            if (hasOffer) {
-                ShopSkill offer = offers.get(i);
-                card.update(offer, points, ownedSkills.getOrDefault(offer, 0),
-                        bodySegments, purchasesThisVisit >= purchaseLimit);
-            }
+            ShopSkill offer = offers.get(i);
+            card.update(offer, points, ownedSkills.getOrDefault(offer, 0),
+                    bodySegments, purchasesThisVisit >= purchaseLimit);
         }
     }
 
@@ -329,7 +324,7 @@ public class GameView {
         HBox shopCards = new HBox(18);
         shopCards.setId("shopCards");
         shopCards.setAlignment(Pos.CENTER);
-        for (int i = 0; i < ShopSkill.values().length; i++) {
+        for (int i = 0; i < ShopOfferRules.SLOT_COUNT; i++) {
             ShopSkillCardView cardView = new ShopSkillCardView();
             shopSkillCardViews.add(cardView);
             shopCards.getChildren().add(cardView.root);
@@ -439,6 +434,7 @@ public class GameView {
         ownedSkillsGrid.setVgap(10);
         ownedSkillsScroll = new ScrollPane(ownedSkillsGrid);
         ownedSkillsScroll.setId("ownedSkillsScroll");
+        ownedSkillsScroll.setFocusTraversable(false);
         ownedSkillsScroll.setFitToWidth(true);
         ownedSkillsScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         ownedSkillsScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
