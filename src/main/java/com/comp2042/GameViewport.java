@@ -10,13 +10,11 @@ final class GameViewport extends Pane {
     private final Region gameLayout;
     private final Group scaledLayout;
     private final Scale scale = new Scale();
-    private final double fullscreenWidth;
-    private final double fullscreenHeight;
+    private final double fullscreenWidth = GameDimensions.DESIGN_WIDTH;
+    private final double fullscreenHeight = GameDimensions.DESIGN_HEIGHT;
 
-    GameViewport(Region gameLayout, double fullscreenWidth, double fullscreenHeight) {
+    GameViewport(Region gameLayout) {
         this.gameLayout = gameLayout;
-        this.fullscreenWidth = fullscreenWidth;
-        this.fullscreenHeight = fullscreenHeight;
         setMinSize(0, 0);
         setPrefSize(fullscreenWidth, fullscreenHeight);
         setStyle("-fx-background-color: " + GameView.GAME_BACKGROUND_COLOR + ";");

@@ -38,7 +38,7 @@ final class SkillInventory {
     boolean canPurchase(ShopSkill skill, int balance, Snake snake) {
         return purchasesThisVisit < MAX_PURCHASES_PER_VISIT && balance >= skill.cost()
                 && (skill != ShopSkill.BLUE_COIN || !isBlueCoinUnlocked())
-                && (skill != ShopSkill.LENGTH_DECREASE || snake.getBody().size() >= 5);
+                && (skill != ShopSkill.LENGTH_DECREASE || !snake.getBody().isEmpty());
     }
 
     boolean purchase(ShopSkill skill, Game game, Snake snake) {
@@ -46,9 +46,8 @@ final class SkillInventory {
             return false;
         }
 
-        if (skill == ShopSkill.LENGTH_DECREASE && snake.removeTailSegments(5) != 5) {
-            game.addPoints(skill.cost());
-            return false;
+        if (skill == ShopSkill.LENGTH_DECREASE) {
+            snake.removeTailSegments(5);
         }
 
         counts.merge(skill, 1, Integer::sum);

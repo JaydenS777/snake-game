@@ -118,10 +118,7 @@ public class MainMenuController {
     }
 
     private void launchSnake(Stage gameStage) {
-        Rectangle2D fullscreenBounds = Screen.getPrimary().getBounds();
-        double fullscreenWidth = fullscreenBounds.getWidth();
-        double fullscreenHeight = fullscreenBounds.getHeight();
-        GameDimensions.Grid grid = GameDimensions.forSidebarLayout(fullscreenWidth, fullscreenHeight);
+        GameDimensions.Grid grid = GameDimensions.gameGrid();
         Game game = new Game(grid.columns(), grid.rows(), POWER_UP, DIFFICULTY, grid.cellSize());
         obstacle = new Obstacle(game.getWidth(), game.getHeight());
         snek = new Snake(game.getWidth(), game.getHeight(), game.isNoBorder(), obstacle);
@@ -148,7 +145,7 @@ public class MainMenuController {
         gameView.shopRefreshButton.setOnAction(event -> controller.refreshShop());
         gameView.setShopSkillPurchaseHandler(controller::purchaseShopSkill);
         var gameLayout = gameView.createGameLayout();
-        var viewport = new GameViewport(gameLayout, fullscreenWidth, fullscreenHeight);
+        var viewport = new GameViewport(gameLayout);
         viewport.addEventFilter(KeyEvent.KEY_PRESSED, controller::filterMovementKey);
         controller.initializeOwnedSkills();
         viewManager.showGameView(viewport);

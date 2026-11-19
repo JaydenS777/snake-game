@@ -175,6 +175,11 @@ public class Snake {
         return new ArrayList<>(body);
     }
 
+    void halveLengthForShop() {
+        int totalLength = body.size() + 1;
+        removeTailSegments(totalLength / 2);
+    }
+
     int removeTailSegments(int segments) {
         if (segments < 0) {
             throw new IllegalArgumentException("Segment count cannot be negative.");

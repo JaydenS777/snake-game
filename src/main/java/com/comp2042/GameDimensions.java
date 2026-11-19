@@ -1,12 +1,18 @@
 package com.comp2042;
 
 final class GameDimensions {
+    static final double DESIGN_WIDTH = 2560;
+    static final double DESIGN_HEIGHT = 1440;
     static final int CELL_SIZE = 50;
     static final double WINDOWED_SCREEN_FRACTION = 0.8;
     static final double SIDEBAR_GAME_WIDTH_FRACTION = 0.65;
     static final double SIDEBAR_GAME_HEIGHT_FRACTION = 0.88;
 
     private GameDimensions() {
+    }
+
+    static Grid gameGrid() {
+        return forSidebarLayout(DESIGN_WIDTH, DESIGN_HEIGHT);
     }
 
     static Grid forFullscreen(double screenWidth, double screenHeight) {

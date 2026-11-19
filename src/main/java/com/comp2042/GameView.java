@@ -600,7 +600,7 @@ public class GameView {
         private void update(ShopSkill newSkill, int balance, int ownedCount, int bodySegments, boolean limitReached) {
             skill = newSkill;
             cardImage.setImage(shopSkillImages.get(newSkill));
-            boolean enoughSegments = newSkill != ShopSkill.LENGTH_DECREASE || bodySegments >= 5;
+            boolean enoughSegments = newSkill != ShopSkill.LENGTH_DECREASE || bodySegments > 0;
             root.setDisable(limitReached || balance < newSkill.cost() || !enoughSegments);
             root.setAccessibleText(newSkill.title() + ", " + newSkill.description()
                     + " Cost: " + newSkill.cost() + ". Owned: " + ownedCount);

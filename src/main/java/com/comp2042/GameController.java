@@ -90,6 +90,8 @@ public class GameController {
             animation.pause();
             pauseCoinSpawner();
             invincibilityTimeline.pause();
+            snek.halveLengthForShop();
+            gameView.drawGrid(coins, snek, obstacle, gameView.gc, false, 0);
             shopOpen = true;
             shopRefreshRules.reset();
             skillInventory.startShopVisit();

@@ -83,26 +83,44 @@ class SkillInventoryTest {
     }
 
     @Test
-    void lengthCardRequiresFiveSegmentsAndRemovesExactlyFive() {
+    void lengthCardClampsToHeadAndCannotBeBoughtAtMinimumLength() {
         Snake snake = new Snake(20, 20, false, new Obstacle(20, 20));
         Game game = new Game(20, 20, false, 'N');
         game.addPoints(300);
         SkillInventory inventory = new SkillInventory();
 
-        assertFalse(inventory.canPurchase(ShopSkill.LENGTH_DECREASE, game.getScorePoints(), snake));
-        assertFalse(inventory.purchase(ShopSkill.LENGTH_DECREASE, game, snake));
-        assertEquals(300, game.getScorePoints());
-
-        for (int i = 0; i < 4; i++) {
-            snake.move('L');
-            snake.ateAnyCoin(java.util.List.of(new Coin(snake.getHead())));
-        }
-
-        assertEquals(5, snake.getBody().size());
+        assertEquals(1, snake.getBody().size());
         assertTrue(inventory.purchase(ShopSkill.LENGTH_DECREASE, game, snake));
         assertEquals(0, snake.getBody().size());
         assertEquals(1, inventory.count(ShopSkill.LENGTH_DECREASE));
         assertEquals(0, game.getScorePoints());
+        game.addPoints(300);
+        assertFalse(inventory.purchase(ShopSkill.LENGTH_DECREASE, game, snake));
+        assertEquals(300, game.getScorePoints());
+    }
+
+    @Test
+    void shopHalvingPrecedesTheAdditionalFiveSegmentReduction() {
+        Snake snake = new Snake(30, 20, false, new Obstacle(30, 20));
+        for (int i = 0; i < 11; i++) {
+            snake.move('L');
+            snake.ateAnyCoin(java.util.List.of(new Coin(snake.getHead())));
+        }
+        var headBefore = snake.getHead();
+        assertEquals(13, snake.getBody().size() + 1);
+        snake.halveLengthForShop();
+        assertEquals(7, snake.getBody().size() + 1);
+        assertEquals(headBefore, snake.getHead());
+
+        Game game = new Game(30, 20, false, 'N');
+        game.addPoints(600);
+        SkillInventory inventory = new SkillInventory();
+        assertTrue(inventory.purchase(ShopSkill.LENGTH_DECREASE, game, snake));
+        assertEquals(2, snake.getBody().size() + 1);
+        assertTrue(inventory.purchase(ShopSkill.LENGTH_DECREASE, game, snake));
+        assertEquals(1, snake.getBody().size() + 1);
+        snake.halveLengthForShop();
+        assertEquals(1, snake.getBody().size() + 1);
     }
 
     @Test
